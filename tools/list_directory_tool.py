@@ -1,0 +1,20 @@
+from typing import Optional
+from services.tree_service import build_tree
+from models.schemas import ListDirectoryOutput
+
+
+def list_directory_tree(
+    project_path: str,
+    max_depth: Optional[int] = None,
+    include_hidden: bool = False
+) -> ListDirectoryOutput:
+    """
+    Returns a filtered directory tree structure for a given project path.
+    Excludes gitignored / junk directories (.venv, node_modules, .git, etc.) to save context.
+    
+    Args:
+        project_path: Absolute path to project root.
+        max_depth: Optional depth cap for directory walking.
+        include_hidden: Whether to include hidden files/folders (default False).
+    """
+    return build_tree(project_path, max_depth, include_hidden)
