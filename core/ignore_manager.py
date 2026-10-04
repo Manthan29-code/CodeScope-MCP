@@ -42,7 +42,7 @@ class IgnoreManager:
             except Exception as e:
                 logger.warning(f"Error reading .gitignore in {self.project_root}: {e}")
 
-        return pathspec.PathSpec.from_lines("gitwildmatch", patterns)
+        return pathspec.PathSpec.from_lines("gitignore", patterns)
 
     def is_ignored(self, relative_path: str, is_dir: bool = False) -> bool:
         """

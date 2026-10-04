@@ -4,7 +4,7 @@ from models.schemas import ListDirectoryOutput
 
 
 def list_directory_tree(
-    project_path: str,
+    project_path: str = ".",
     max_depth: Optional[int] = None,
     include_hidden: bool = False
 ) -> ListDirectoryOutput:
@@ -13,7 +13,7 @@ def list_directory_tree(
     Excludes gitignored / junk directories (.venv, node_modules, .git, etc.) to save context.
     
     Args:
-        project_path: Absolute path to project root.
+        project_path: Absolute or relative path to project root (default ".").
         max_depth: Optional depth cap for directory walking.
         include_hidden: Whether to include hidden files/folders (default False).
     """

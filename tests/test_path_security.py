@@ -22,13 +22,18 @@ class TestPathSecurity(unittest.TestCase):
         with self.assertRaises(ValueError):
             resolve_and_verify(str(self.root_path), "../outside.txt")
 
-    def test_empty_root(self):
+    def test_empty_root_strict(self):
         with self.assertRaises(ValueError):
-            resolve_and_verify("", "hello.txt")
+            resolve_and_verify("", "hello.txt", fallback_to_default=False)
 
-    def test_nonexistent_root(self):
+    def test_nonexistent_root_strict(self):
         with self.assertRaises(ValueError):
-            resolve_and_verify(str(self.root_path / "nonexistent"), "hello.txt")
+            resolve_and_verify(str(self.root_path / "nonexistent"), "hello.txt", fallback_to_default=False)
+
+    def test_nonexistent_root_fallback(self):
+        # Should fallback to server DEFAULT_PROJECT_PATH without crashing
+        resolved = resolve_and_verify("/fake/remote/working_dir", "", fallback_to_default=True)
+        self.assertTrue(resolved.exists())
 
 
 if __name__ == "__main__":

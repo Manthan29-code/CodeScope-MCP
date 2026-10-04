@@ -4,8 +4,8 @@ from models.schemas import SearchFilesOutput
 
 
 def search_files(
-    project_path: str,
     query: str,
+    project_path: str = ".",
     search_type: Literal["content", "filename"] = "content",
     file_pattern: Optional[str] = None,
     case_sensitive: bool = False,
@@ -17,8 +17,8 @@ def search_files(
     Filters out ignored directories/files (.venv, node_modules, .git, build, etc.) automatically.
     
     Args:
-        project_path: Absolute path to project root.
         query: Search string or regex pattern to look for.
+        project_path: Absolute or relative path to project root (default ".").
         search_type: "content" (grep inside files) or "filename" (match file names).
         file_pattern: Optional glob filter e.g. '*.py' or '*.ts'.
         case_sensitive: Whether search should be case sensitive (default False).

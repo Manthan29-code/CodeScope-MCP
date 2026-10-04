@@ -272,6 +272,7 @@ Edit `.env` to configure your settings:
 ```dotenv
 HOST=127.0.0.1
 PORT=8000
+DEFAULT_PROJECT_PATH=.         # Fallback workspace root on server
 MAX_FILE_SIZE_BYTES=10485760   # 10 MB limit
 MAX_LINES_PER_READ=1000        # Max lines returned per read call
 ALLOW_SYMLINKS=false           # Prevent symlink escapes
@@ -403,7 +404,7 @@ CodeScope includes a full pytest suite covering security checks, ignore manageme
 
 Run the test suite:
 ```bash
-pytest -v
+python -m pytest -v
 ```
 
 ---

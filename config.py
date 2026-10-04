@@ -8,6 +8,7 @@ load_dotenv()
 # Server Settings
 HOST: str = os.getenv("HOST", "127.0.0.1")
 PORT: int = int(os.getenv("PORT", "8000"))
+DEFAULT_PROJECT_PATH: str = os.getenv("DEFAULT_PROJECT_PATH", str(Path.cwd().resolve()))
 
 # Security & Constraints
 MAX_FILE_SIZE_BYTES: int = int(os.getenv("MAX_FILE_SIZE_BYTES", str(10 * 1024 * 1024)))  # 10 MB

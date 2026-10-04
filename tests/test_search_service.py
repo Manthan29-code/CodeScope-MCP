@@ -33,9 +33,12 @@ class TestSearchService(unittest.TestCase):
         self.assertEqual(res.matches[0].file_path, "src/index.js")
 
     def test_search_file_pattern_filter(self):
-        res = search(str(self.root_path), query="Hello", search_type="content", file_pattern="*.py")
+        res = search(str(self.root_path), query="hello_world", search_type="content", file_pattern="*.py")
         self.assertEqual(len(res.matches), 1)
         self.assertEqual(res.matches[0].file_path, "src/app.py")
+        # Ensure .js is not included
+        for match in res.matches:
+            self.assertTrue(match.file_path.endswith(".py"))
 
 
 if __name__ == "__main__":

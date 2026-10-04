@@ -15,7 +15,7 @@ TreeNode.model_rebuild()
 
 
 class ListDirectoryInput(BaseModel):
-    project_path: str = Field(..., description="Absolute path to the project root directory")
+    project_path: str = Field(".", description="Absolute or relative path to the project root directory (defaults to current directory)")
     max_depth: Optional[int] = Field(None, description="Maximum directory traversal depth (None for unlimited)")
     include_hidden: bool = Field(False, description="Whether to include hidden files/directories (starting with '.')")
 
@@ -28,8 +28,8 @@ class ListDirectoryOutput(BaseModel):
 
 
 class FileMetadataInput(BaseModel):
-    project_path: str = Field(..., description="Absolute path to the project root directory")
     file_path: str = Field(..., description="Relative path to the target file from project root")
+    project_path: str = Field(".", description="Absolute or relative path to the project root directory")
 
 
 class FileMetadataOutput(BaseModel):
@@ -42,8 +42,8 @@ class FileMetadataOutput(BaseModel):
 
 
 class ReadFileInput(BaseModel):
-    project_path: str = Field(..., description="Absolute path to the project root directory")
     file_path: str = Field(..., description="Relative path to the target file from project root")
+    project_path: str = Field(".", description="Absolute or relative path to the project root directory")
     offset: int = Field(0, description="0-indexed starting line number")
     limit: Optional[int] = Field(None, description="Maximum number of lines to read (defaults to server MAX_LINES_PER_READ)")
 
@@ -60,8 +60,8 @@ class ReadFileOutput(BaseModel):
 
 
 class ReadMultipleFilesInput(BaseModel):
-    project_path: str = Field(..., description="Absolute path to the project root directory")
     file_paths: List[str] = Field(..., description="List of relative file paths to read")
+    project_path: str = Field(".", description="Absolute or relative path to the project root directory")
     limit_per_file: Optional[int] = Field(None, description="Maximum lines to read per file")
 
 
@@ -76,8 +76,8 @@ class SearchMatch(BaseModel):
 
 
 class SearchFilesInput(BaseModel):
-    project_path: str = Field(..., description="Absolute path to project root")
     query: str = Field(..., description="Search term or pattern")
+    project_path: str = Field(".", description="Absolute or relative path to project root")
     search_type: Literal["content", "filename"] = Field("content", description="Search content or filename")
     file_pattern: Optional[str] = Field(None, description="Glob pattern to filter target files e.g. '*.py'")
     case_sensitive: bool = Field(False, description="Case-sensitive search flag")
