@@ -82,6 +82,7 @@ class SearchFilesInput(BaseModel):
     search_type: Literal["content", "filename"] = Field("content", description="Search content or filename")
     file_pattern: Optional[str] = Field(None, description="Glob pattern to filter target files e.g. '*.py'")
     case_sensitive: bool = Field(False, description="Case-sensitive search flag")
+    regex: bool = Field(False, description="Whether to evaluate query as a regular expression (default False)")
     max_results: int = Field(50, description="Maximum results to return")
     offset: int = Field(0, description="Pagination offset index")
 
@@ -138,3 +139,73 @@ class EditFileOutput(BaseModel):
     diff: str = Field(..., description="Unified diff of the changes")
     new_hash: str = Field(..., description="SHA-256 hex digest of the file after edits")
     dry_run: bool = Field(False, description="True if operation was dry-run preview only")
+
+
+# ==========================================
+# File-Level Operations & Replace (Part 4)
+# ==========================================
+
+
+class DeleteFileInput(BaseModel):
+    file_path: str = Field(..., description="Relative path to target file from project root")
+    project_path: str = Field(".", description="Absolute or relative path to project root")
+
+
+class DeleteFileOutput(BaseModel):
+    file_path: str = Field(..., description="Relative path of deleted file")
+    deleted: bool = Field(..., description="True if file was successfully deleted")
+    size_bytes: int = Field(..., description="Size of deleted file in bytes")
+
+
+class MoveFileInput(BaseModel):
+    source_path: str = Field(..., description="Relative path to source file from project root")
+    destination_path: str = Field(..., description="Relative path to destination file from project root")
+    project_path: str = Field(".", description="Absolute or relative path to project root")
+    create_parents: bool = Field(False, description="Whether to create missing parent directories for destination (default False)")
+
+
+class MoveFileOutput(BaseModel):
+    source_path: str = Field(..., description="Relative path to source file")
+    destination_path: str = Field(..., description="Relative path to destination file")
+
+
+class CopyFileInput(BaseModel):
+    source_path: str = Field(..., description="Relative path to source file from project root")
+    destination_path: str = Field(..., description="Relative path to destination file from project root")
+    project_path: str = Field(".", description="Absolute or relative path to project root")
+    create_parents: bool = Field(False, description="Whether to create missing parent directories for destination (default False)")
+
+
+class CopyFileOutput(BaseModel):
+    source_path: str = Field(..., description="Relative path to source file")
+    destination_path: str = Field(..., description="Relative path to destination file")
+    bytes_copied: int = Field(..., description="Number of bytes copied")
+
+
+class ReplaceInFilesInput(BaseModel):
+    find: str = Field(..., min_length=1, description="String or regex pattern to search for across files")
+    replace: str = Field(..., description="Replacement string (supports regex back-references in regex mode)")
+    file_pattern: str = Field(..., description="Glob pattern to filter target files e.g. '*.py' (required)")
+    project_path: str = Field(".", description="Absolute or relative path to project root")
+    subpath: Optional[str] = Field(None, description="Optional subdirectory relative to project root to limit scope")
+    regex: bool = Field(False, description="Whether find pattern is a regular expression (default False)")
+    case_sensitive: bool = Field(True, description="Whether matching should be case-sensitive (default True)")
+    dry_run: bool = Field(True, description="If True, preview replacement diffs without modifying files (default True)")
+    expected_replacements: Optional[int] = Field(None, description="Expected total replacement count for safety verification")
+
+
+class ReplaceFileResult(BaseModel):
+    file_path: str = Field(..., description="Relative path to changed file")
+    replacements: int = Field(..., description="Number of replacements made in this file")
+    diff: str = Field(..., description="Unified diff preview of changes in this file")
+
+
+class ReplaceInFilesOutput(BaseModel):
+    dry_run: bool = Field(..., description="True if operation was dry-run preview only")
+    files_changed: int = Field(..., description="Total number of files changed (or would be changed)")
+    total_replacements: int = Field(..., description="Total string replacements made (or would be made)")
+    results: List[ReplaceFileResult] = Field(..., description="List of per-file change results and diffs")
+    skipped: List[dict] = Field(default_factory=list, description="List of skipped files with reasons (e.g. binary, protected, changed)")
+    partial: bool = Field(False, description="True if operation stopped mid-way due to an error")
+    error: Optional[str] = Field(None, description="Error message if operation encountered a fatal error or mismatch")
+

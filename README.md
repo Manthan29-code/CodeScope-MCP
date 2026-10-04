@@ -57,32 +57,74 @@ When using AI coding assistants or LLM chat agents over MCP, granting raw filesy
 
 ## 🛠️ What It Does (Core Tools)
 
-CodeScope registers 5 specialized tools designed for progressive discovery (from cheapest context cost to full retrieval):
+CodeScope provides a progressive, token-conscious toolset for codebase exploration, code search, and safe write operations:
 
-### 1. `list_directory_tree`
+### 📖 Read Tools (Always Available)
+
+#### 1. `list_directory_tree`
 Generates a hierarchical directory tree starting from the project root.
 - **Ignore Filtering**: Filters out `.git`, `node_modules`, `.venv`, `.next`, cache files, and custom `.gitignore` patterns.
 - **Controls**: Supports `max_depth` limits and toggling hidden files (`include_hidden`).
 - **Token Hints**: Supplies file sizes and token estimates per file directly inside the tree nodes.
 
-### 2. `search_files`
-Performs fast grep-like search across files or searches matching filenames.
+#### 2. `search_files`
+Performs fast search across file contents or filenames.
 - **Search Modes**: `content` (grep search within file contents) or `filename` (find files by name).
-- **Filters & Regex**: Supports regex queries, glob file patterns (e.g., `*.py`, `src/**/*.ts`), and case sensitivity.
+- **Filters & Regex**: Supports regular expressions (`regex=True` with timeout guard), glob file patterns (e.g. `*.py`, `*.ts`), and case sensitivity.
 - **Pagination**: Includes `offset` and `max_results` (with `has_more` flag) to prevent prompt overflows.
 
-### 3. `get_file_metadata`
+#### 3. `get_file_metadata`
 Inspects file properties without consuming context on the file body.
 - Returns file size in bytes, ISO 8601 last modified timestamp, detected programming language/format, binary status, and rough token estimate.
 
-### 4. `read_file`
+#### 4. `read_file`
 Safely reads text file contents with built-in safeguards.
 - **Pagination**: Supports 0-indexed line `offset` and `limit` to read chunks of large files.
+- **Content Hash**: Returns `content_hash` (SHA-256) of the entire file, usable as `expected_hash` in subsequent write/edit calls to prevent clobbering concurrent edits.
 - **Safety**: Automatically rejects binary files and enforces maximum file size and line caps.
 
-### 5. `read_multiple_files`
+#### 5. `read_multiple_files`
 Batch file retrieval utility to fetch multiple files in a single MCP tool call.
 - Reduces network round-trips and conversational turns when pulling code references found via search.
+
+---
+
+### ✍️ Write & Edit Tools (Opt-in via `ENABLE_WRITE_TOOLS=true`)
+
+Write tools are disabled by default. When enabled, they operate under strict allowlist containment, atomic write safety, style preservation, and staleness verification:
+
+#### 6. `write_file`
+Creates a new file or completely overwrites an existing file.
+- **Safety**: Requires `overwrite=True` to replace an existing file.
+- **Style Preservation**: Overwrites preserve the existing file's encoding, BOM, and line endings (CRLF/LF).
+- **Staleness Check**: Supports `expected_hash` to verify file state before writing.
+- **Dry Run**: Supports `dry_run=True` to preview unified diffs without modifying disk.
+
+#### 7. `edit_file`
+Applies sequential exact-match string replacements to an existing file.
+- **Precise**: Matches exact strings (including indentation and line breaks).
+- **Sequential**: Edits apply in order, each operating on the result of previous edits in memory before atomic disk write.
+- **Safety**: Fails atomically if any `old_string` is not found or ambiguous (unless `replace_all=True`).
+
+#### 8. `delete_file`
+Permanently deletes a single file within the allowed project root.
+- Rejects directories, protected files, and ignored paths.
+
+#### 9. `move_file`
+Moves or renames a single file.
+- Does not overwrite existing destination files (supports Windows case-only renames).
+- Supports `create_parents=True` to create destination directories on demand.
+
+#### 10. `copy_file`
+Copies a single file within the project.
+- Atomic copy via temporary files; does not overwrite existing files.
+
+#### 11. `replace_in_files`
+Safely performs bulk search-and-replace across multiple files.
+- **Workflow**: Preview first with `dry_run=True` (default), then execute with `dry_run=False` and `expected_replacements` set to the previewed count.
+- **Regex & Captures**: Supports regex back-references (e.g. `\1`) or literal string replacement.
+- **Protection**: Excludes binary files, protected paths, and mixed-line-ending files automatically.
+
 
 ---
 

@@ -2,6 +2,13 @@ from typing import Optional, Literal
 from services.search_service import search
 from models.schemas import SearchFilesOutput
 
+annotations = {
+    "readOnlyHint": True,
+    "destructiveHint": False,
+    "idempotentHint": True,
+    "openWorldHint": False,
+}
+
 
 def search_files(
     query: str,
@@ -9,6 +16,7 @@ def search_files(
     search_type: Literal["content", "filename"] = "content",
     file_pattern: Optional[str] = None,
     case_sensitive: bool = False,
+    regex: bool = False,
     max_results: int = 50,
     offset: int = 0
 ) -> SearchFilesOutput:
@@ -22,6 +30,7 @@ def search_files(
         search_type: "content" (grep inside files) or "filename" (match file names).
         file_pattern: Optional glob filter e.g. '*.py' or '*.ts'.
         case_sensitive: Whether search should be case sensitive (default False).
+        regex: Whether to evaluate query as a regular expression (default False).
         max_results: Maximum matches to return in one page (default 50).
         offset: Pagination starting offset index (default 0).
     """
@@ -31,6 +40,8 @@ def search_files(
         search_type=search_type,
         file_pattern=file_pattern,
         case_sensitive=case_sensitive,
+        regex=regex,
         max_results=max_results,
         offset=offset
     )
+

@@ -77,3 +77,9 @@ PROTECTED_PATH_PATTERNS: List[str] = [
     "id_rsa*",
     "id_ed25519*",
 ]
+
+# Replace and Regex Operations Settings (Part 4)
+MAX_FILES_PER_REPLACE: int = int(os.getenv("MAX_FILES_PER_REPLACE", "100"))
+REGEX_TIMEOUT_SECONDS: float = float(os.getenv("REGEX_TIMEOUT_SECONDS", "2.0"))
+MAX_REGEX_PATTERN_LENGTH: int = int(os.getenv("MAX_REGEX_PATTERN_LENGTH", "500"))
+

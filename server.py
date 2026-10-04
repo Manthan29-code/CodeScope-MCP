@@ -17,13 +17,21 @@ mcp.add_tool(read_file)
 mcp.add_tool(read_multiple_files)
 mcp.add_tool(search_files)
 
-# Conditionally Register Write Tools (Part 3)
+# Conditionally Register Write Tools (Parts 3 & 4)
 if config.ENABLE_WRITE_TOOLS:
     from tools.write_file_tool import write_file
     from tools.edit_file_tool import edit_file
+    from tools.delete_file_tool import delete_file
+    from tools.move_file_tool import move_file
+    from tools.copy_file_tool import copy_file
+    from tools.replace_in_files_tool import replace_in_files
 
     mcp.add_tool(write_file)
     mcp.add_tool(edit_file)
+    mcp.add_tool(delete_file)
+    mcp.add_tool(move_file)
+    mcp.add_tool(copy_file)
+    mcp.add_tool(replace_in_files)
 
     if not config.WRITE_ALLOWED_ROOTS:
         logger.warning(
@@ -34,6 +42,9 @@ if config.ENABLE_WRITE_TOOLS:
         logger.warning(
             f"Write tools are ENABLED with allowed roots: {config.WRITE_ALLOWED_ROOTS}"
         )
-    logger.info("Registered write tools: write_file, edit_file.")
+    logger.info(
+        "Registered write tools: write_file, edit_file, delete_file, move_file, copy_file, replace_in_files."
+    )
 else:
     logger.info("Write tools are disabled (ENABLE_WRITE_TOOLS=false).")
+
