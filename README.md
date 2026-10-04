@@ -21,11 +21,13 @@ Instead of naively dumping entire folders or overwhelming context windows with g
   - [Installation & Setup](#installation--setup)
   - [Environment Configuration](#environment-configuration)
   - [Running the Server](#running-the-server)
+- [Working with Write Tools & AI Prompting](#-working-with-write-tools--ai-prompting)
 - [Exposing with ngrok (Remote / Cloud Setup)](#-exposing-with-ngrok-remote--cloud-setup)
 - [Connecting to MCP Clients](#-connecting-to-mcp-clients)
 - [Security & Constraints](#-security--constraints)
 - [Running Tests](#-running-tests)
 - [License](#-license)
+
 
 ---
 
@@ -309,16 +311,34 @@ Create a `.env` file from the example template:
 cp .env.example .env
 ```
 
-Edit `.env` to configure your settings:
+Edit `.env` to configure your server and write permissions:
 
 ```dotenv
+# Server Settings
 HOST=127.0.0.1
 PORT=8000
 DEFAULT_PROJECT_PATH=.         # Fallback workspace root on server
 MAX_FILE_SIZE_BYTES=10485760   # 10 MB limit
 MAX_LINES_PER_READ=1000        # Max lines returned per read call
 ALLOW_SYMLINKS=false           # Prevent symlink escapes
+
+# Write Operations Settings (Opt-in)
+ENABLE_WRITE_TOOLS=true
+WRITE_ALLOWED_ROOTS=C:\MyProject   # Semicolon-separated allowlist of writable folders
+MAX_WRITE_SIZE_BYTES=1000000       # 1 MB write limit per file
+MAX_EDITS_PER_CALL=50
+MAX_DIFF_CHARS=50000
+BLOCK_WRITES_TO_IGNORED=true
+MAX_FILES_PER_REPLACE=100
+REGEX_TIMEOUT_SECONDS=2.0
+MAX_REGEX_PATTERN_LENGTH=500
 ```
+
+> [!IMPORTANT]
+> **`WRITE_ALLOWED_ROOTS` Security Gate**:
+> All write tools operate in a **fail-closed** mode. If `WRITE_ALLOWED_ROOTS` is empty or if `project_path` is not inside an allowlisted folder, all write operations are refused. Setting `WRITE_ALLOWED_ROOTS=C:\MyProject` allows writing to any workspace inside `C:\MyProject\` (e.g., `C:\MyProject\WorkPulse`).
+
+---
 
 ### Running the Server
 
@@ -335,77 +355,120 @@ http://127.0.0.1:8000/mcp
 
 ---
 
+## ✍️ Working with Write Tools & AI Prompting
+
+When prompting AI coding assistants (like Cursor, Claude Desktop, or custom agents) connected to CodeScope MCP to generate or modify code, follow these best practices:
+
+### 1. Relative Paths vs. Project Roots
+- **`project_path`**: The absolute root of your project (e.g. `C:\MyProject\WorkPulse`).
+- **`file_path`**: The clean relative path from `project_path` (e.g. `index.html`, `css/variables.css`, `js/modules/app.js`).
+- ❌ Do **not** repeat the project name in the file path (e.g. avoid `WorkPulse/index.html` when `project_path` is already `C:\MyProject\WorkPulse`).
+
+### 2. Automatic Nested Folder Creation (`create_parents=True`)
+When writing into nested directories (such as `css/`, `js/modules/`, `assets/icons/`), CodeScope will automatically create all missing parent directories when `create_parents=True` is used.
+
+### 3. File Updates & Rewrites (`overwrite=True`)
+To replace an existing file completely, `overwrite=True` is required to prevent accidental overwrites. For partial modifications, AI models can use `edit_file` with exact-match string replacements.
+
+---
+
+### 💡 Example Prompt for AI Assistants (Building Modular Websites)
+
+You can give your AI assistant a prompt like this to build projects end-to-end:
+
+```markdown
+Build a complete, modular web application for WorkPulse in `C:\MyProject\WorkPulse` using CodeScope write tools:
+
+- Use `project_path="C:\\MyProject\\WorkPulse"`.
+- Create a modular folder structure:
+  ├── index.html
+  ├── css/
+  │   ├── variables.css
+  │   ├── base.css
+  │   └── components.css
+  ├── js/
+  │   ├── app.js
+  │   └── modules/
+  │       ├── state.js
+  │       └── utils.js
+  └── README.md
+- Use `write_file` with `create_parents=True` for each file.
+```
+
+---
+
 ## 🌐 Exposing with ngrok (Remote / Cloud Setup)
 
-If you are running CodeScope MCP on your local machine and want to connect it to an external AI service, cloud agent, or remote LLM chat platform, you can expose the local Streamable HTTP server via **ngrok**.
+If you are running CodeScope MCP locally and want to connect it to an external AI platform, cloud chat tool, or remote LLM service, you can expose the local Streamable HTTP server securely using **ngrok**.
 
-### Step 1: Install & Authenticate ngrok
+### Step 1: Install ngrok
 
-1. Download ngrok from [ngrok.com](https://ngrok.com/download) or install via package manager:
-   - **Windows (Winget / Chocolatey):**
-     ```powershell
-     winget install ngrok.ngrok
-     # or
-     choco install ngrok
-     ```
-   - **macOS (Homebrew):**
-     ```bash
-     brew install ngrok/ngrok/ngrok
-     ```
-   - **Linux:**
-     ```bash
-     snap install ngrok
-     ```
+Choose the installation method for your operating system:
 
-2. Add your ngrok authtoken (sign up for free at [dashboard.ngrok.com](https://dashboard.ngrok.com)):
+- **Windows (Winget / Chocolatey):**
+  ```powershell
+  winget install ngrok.ngrok
+  # or
+  choco install ngrok
+  ```
+- **macOS (Homebrew):**
+  ```bash
+  brew install ngrok/ngrok/ngrok
+  ```
+- **Linux (Snap / apt):**
+  ```bash
+  snap install ngrok
+  ```
+- **Direct Download:** Download the standalone binary from [ngrok.com/download](https://ngrok.com/download).
+
+### Step 2: Authenticate ngrok
+
+1. Sign up for a free account at [dashboard.ngrok.com](https://dashboard.ngrok.com).
+2. Copy your authtoken and configure it in your terminal:
    ```bash
    ngrok config add-authtoken <YOUR_NGROK_AUTHTOKEN>
    ```
 
-### Step 2: Start CodeScope MCP Server
+### Step 3: Start CodeScope MCP Server
 
 Make sure your CodeScope MCP server is running in a terminal:
 ```bash
 python main.py
 ```
-*(Server starts listening on `http://127.0.0.1:8000`)*
+*(Server listens locally on `http://127.0.0.1:8000`)*
 
-### Step 3: Launch ngrok Tunnel
+### Step 4: Launch ngrok Tunnel
 
-In a separate terminal, start an HTTP tunnel pointing to port `8000`:
+In a separate terminal, start an HTTP tunnel forwarding port `8000`:
 ```bash
 ngrok http 8000
 ```
 
-ngrok will output a session dashboard similar to:
+ngrok will display a forwarding URL in the dashboard:
 ```text
 Session Status                online
 Account                       Your Name (Plan: Free)
 Forwarding                    https://a1b2-c3d4.ngrok-free.app -> http://localhost:8000
 ```
 
-### Step 4: Access Your Public MCP Endpoint
+### Step 5: Copy Your Public MCP Endpoint
 
-Your public MCP URL will be:
+Your public MCP URL is the forwarding address with the `/mcp` route appended:
 ```
 https://<your-ngrok-subdomain>.ngrok-free.app/mcp
 ```
-
 *(For example: `https://a1b2-c3d4.ngrok-free.app/mcp`)*
 
-> [!TIP]
-> If you have a paid or static ngrok domain, you can keep the URL permanent with:
-> `ngrok http --url=your-domain.ngrok-free.app 8000`
+> [!WARNING]
+> Always append `/mcp` to your URL in the MCP client settings (e.g. `https://xxxx.ngrok-free.app/mcp`). Accessing the root path `/` will return `404 Not Found`.
 
 ---
 
 ## 🔌 Connecting to MCP Clients
 
-### Example: MCP Client Configuration (Streamable HTTP)
+Add CodeScope to your MCP client configuration (such as Cursor, Claude Desktop, LibreChat, or custom MCP agents):
 
-Add CodeScope to your MCP client configuration (such as Cursor, Claude Desktop, or custom MCP clients):
-
-#### Local Setup:
+#### Local Setup (Streamable HTTP):
 ```json
 {
   "mcpServers": {
@@ -433,20 +496,21 @@ Add CodeScope to your MCP client configuration (such as Cursor, Claude Desktop, 
 
 ## 🔒 Security & Constraints
 
-- **Strict Path Containment**: Resolves all relative paths against the provided `project_path`. Attempts to escape the directory via `../` or absolute path jumps raise a `SecurityException`.
+- **Fail-Closed Write Allowlist**: Writes are strictly bounded by `WRITE_ALLOWED_ROOTS`. Attempts to access unauthorized paths or root drives are refused.
+- **Protected Path Shield**: Protects `.git/`, `.env`, private keys (`*.pem`, `*.key`, `id_rsa*`) from being read, written, or modified.
+- **Strict Path Containment**: Resolves all relative paths against the provided `project_path`. Attempts to escape the directory via `../` or absolute path jumps raise security exceptions.
 - **Symlink Refusal**: Rejects symlinks by default (`ALLOW_SYMLINKS=false`) to prevent filesystem traversal via aliased paths.
-- **Binary Content Guard**: Uses character inspection and extension mapping to block binary payloads from consuming prompt tokens.
-- **File Size & Line Limits**: Enforces hard caps on single read operations to protect against Denial of Service (DoS) and context overflow.
+- **Binary Content Guard**: Detects binary content to avoid corrupting text files or dumping raw bytes into prompts.
+- **Style Preservation & Atomic Writes**: Preserves original line endings (CRLF/LF), BOM, and encodings, writing updates via temporary files to avoid partial file corruption.
 
 ---
 
 ## 🧪 Running Tests
 
-CodeScope includes a full pytest suite covering security checks, ignore management, tree construction, search, and reading services.
+CodeScope includes a full pytest test suite covering path security, ignore managers, tree building, search, reading services, and write/edit/file operations:
 
-Run the test suite:
 ```bash
-python -m pytest -v
+python -m pytest -q
 ```
 
 ---
@@ -454,3 +518,4 @@ python -m pytest -v
 ## 📄 License
 
 This project is licensed under the [MIT License](LICENSE).
+
