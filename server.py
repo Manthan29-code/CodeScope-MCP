@@ -7,8 +7,16 @@ from tools.read_file_tool import read_file
 from tools.read_multiple_files_tool import read_multiple_files
 from tools.search_files_tool import search_files
 
+SERVER_INSTRUCTIONS = """
+CodeScope MCP Server Guidelines:
+- Code Formatting & Indentation: When writing or editing code files (HTML, CSS, JavaScript, TypeScript, React/JSX/TSX, Python, Java, C/C++, Go, Rust, JSON, YAML, etc.), ALWAYS output clean, beautifully formatted, multi-line source code with standard indentation (2 spaces for HTML/CSS/JS/TS/React/JSON/YAML, 4 spaces for Python/Java/C/C++).
+- No Minification: NEVER compress or collapse entire files, functions, HTML tags, or CSS rules into a single line unless specifically requested (e.g. a .min.js or .min.css file).
+- File Paths: All file paths must be relative to project_path (e.g., 'src/App.jsx', 'css/style.css', 'index.html').
+- Directory Creation: Always set create_parents=True when writing files located in subdirectories so parent folders are automatically created.
+"""
+
 # Create FastMCP server instance
-mcp = FastMCP("CodeScope")
+mcp = FastMCP("CodeScope", instructions=SERVER_INSTRUCTIONS)
 
 # Register Read Tools (always available)
 mcp.add_tool(list_directory_tree)

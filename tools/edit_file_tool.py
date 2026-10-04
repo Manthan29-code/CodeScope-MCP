@@ -22,7 +22,8 @@ def edit_file(
     
     Guidelines:
       - Always inspect the file first with read_file before constructing edits.
-      - old_string must match text in the file exactly (including indentation and spaces) and must be unique.
+      - old_string must match text in the file exactly (including exact indentation, newlines, and spaces) and must be unique.
+      - new_string must preserve clean multi-line formatting and proper indentation (matching surrounding code style).
       - If old_string appears multiple times, include surrounding lines to make it unique or set replace_all=True.
       - Edits apply sequentially in the given order; each edit operates on the output of the preceding edit.
       - Pass expected_hash from read_file to ensure the file has not been modified since it was read.
