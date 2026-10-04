@@ -120,8 +120,8 @@ class WriteFileOutput(BaseModel):
 
 
 class EditOperation(BaseModel):
-    old_string: str = Field(..., min_length=1, description="Exact string to find and replace in the file")
-    new_string: str = Field(..., description="Replacement string (empty string deletes old_string)")
+    old_string: str = Field(..., min_length=1, description="Exact substring to find and replace in the file (must match exact existing indentation, spaces, and newlines)")
+    new_string: str = Field(..., description="Replacement string with proper multi-line formatting and indentation matching surrounding code (empty string deletes old_string)")
     replace_all: bool = Field(False, description="If True, replace all occurrences; if False, fail if old_string is not unique")
 
 
