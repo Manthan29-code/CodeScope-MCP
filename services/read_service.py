@@ -3,6 +3,7 @@ import config
 from core.path_security import resolve_and_verify
 from core.file_classifier import is_binary_file
 from core.ignore_manager import IgnoreManager
+from core.file_writer import sha256_bytes
 from models.schemas import ReadFileOutput, ReadMultipleFilesOutput
 
 
@@ -14,6 +15,7 @@ def read_one(
 ) -> ReadFileOutput:
     """
     Reads a single file with line range pagination and truncation handling.
+    Returns content_hash of the entire raw file for valid text files.
     """
     rel_clean = file_path.replace("\\", "/").lstrip("/")
     limit_val = limit if limit is not None else config.MAX_LINES_PER_READ
@@ -30,6 +32,7 @@ def read_one(
             total_lines=0,
             truncated=False,
             is_binary=False,
+            content_hash=None,
             error=str(e)
         )
 
@@ -42,6 +45,7 @@ def read_one(
             total_lines=0,
             truncated=False,
             is_binary=False,
+            content_hash=None,
             error=f"File not found: {rel_clean}"
         )
 
@@ -54,6 +58,7 @@ def read_one(
             total_lines=0,
             truncated=False,
             is_binary=False,
+            content_hash=None,
             error=f"Target path is not a file: {rel_clean}"
         )
 
@@ -68,6 +73,7 @@ def read_one(
             total_lines=0,
             truncated=False,
             is_binary=False,
+            content_hash=None,
             error=f"File is ignored by configuration or .gitignore: {rel_clean}"
         )
 
@@ -82,6 +88,7 @@ def read_one(
             total_lines=0,
             truncated=True,
             is_binary=False,
+            content_hash=None,
             error=f"File size ({stat.st_size} bytes) exceeds maximum limit ({config.MAX_FILE_SIZE_BYTES} bytes)"
         )
 
@@ -95,7 +102,25 @@ def read_one(
             total_lines=0,
             truncated=False,
             is_binary=True,
+            content_hash=None,
             error=None
+        )
+
+    # Calculate raw content hash
+    try:
+        raw_bytes = target_path.read_bytes()
+        file_hash = sha256_bytes(raw_bytes)
+    except Exception as e:
+        return ReadFileOutput(
+            file_path=rel_clean,
+            content="",
+            start_line=0,
+            end_line=0,
+            total_lines=0,
+            truncated=False,
+            is_binary=False,
+            content_hash=None,
+            error=f"Error reading file bytes: {e}"
         )
 
     # Read text content
@@ -111,7 +136,8 @@ def read_one(
             total_lines=0,
             truncated=False,
             is_binary=False,
-            error=f"Error reading file: {e}"
+            content_hash=file_hash,
+            error=f"Error reading file lines: {e}"
         )
 
     total_lines = len(lines)
@@ -127,6 +153,7 @@ def read_one(
             total_lines=total_lines,
             truncated=False,
             is_binary=False,
+            content_hash=file_hash,
             error=None
         )
 
@@ -145,6 +172,7 @@ def read_one(
         total_lines=total_lines,
         truncated=truncated,
         is_binary=False,
+        content_hash=file_hash,
         error=None
     )
 

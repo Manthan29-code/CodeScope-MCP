@@ -58,3 +58,8 @@ class IgnoreManager:
                 return True
 
         return self.spec.match_file(clean_path)
+
+
+def clear_cache():
+    """Module-level helper to clear the IgnoreManager cache."""
+    IgnoreManager.clear_cache()

@@ -2,6 +2,13 @@ from typing import List, Optional
 from services.read_service import read_many
 from models.schemas import ReadMultipleFilesOutput
 
+annotations = {
+    "readOnlyHint": True,
+    "destructiveHint": False,
+    "idempotentHint": True,
+    "openWorldHint": False,
+}
+
 
 def read_multiple_files(
     file_paths: List[str],

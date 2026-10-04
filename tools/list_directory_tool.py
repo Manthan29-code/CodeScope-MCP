@@ -2,6 +2,13 @@ from typing import Optional
 from services.tree_service import build_tree
 from models.schemas import ListDirectoryOutput
 
+annotations = {
+    "readOnlyHint": True,
+    "destructiveHint": False,
+    "idempotentHint": True,
+    "openWorldHint": False,
+}
+
 
 def list_directory_tree(
     project_path: str = ".",

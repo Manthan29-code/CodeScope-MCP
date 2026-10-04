@@ -1,6 +1,13 @@
 from services.metadata_service import get_metadata
 from models.schemas import FileMetadataOutput
 
+annotations = {
+    "readOnlyHint": True,
+    "destructiveHint": False,
+    "idempotentHint": True,
+    "openWorldHint": False,
+}
+
 
 def get_file_metadata(
     file_path: str,

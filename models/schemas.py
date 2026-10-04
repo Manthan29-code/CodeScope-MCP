@@ -56,6 +56,7 @@ class ReadFileOutput(BaseModel):
     total_lines: int = Field(..., description="Total lines in the file")
     truncated: bool = Field(..., description="True if output was truncated due to limit or size cap")
     is_binary: bool = Field(..., description="True if file was detected as binary")
+    content_hash: Optional[str] = Field(None, description="SHA-256 hex digest of the entire raw file bytes")
     error: Optional[str] = Field(None, description="Error message if read operation failed for this file")
 
 
@@ -89,3 +90,51 @@ class SearchFilesOutput(BaseModel):
     matches: List[SearchMatch] = Field(..., description="Matching search hits")
     total_matches: int = Field(..., description="Count of matches returned in this page")
     has_more: bool = Field(..., description="True if more matches exist beyond current offset/max_results")
+
+
+# ==========================================
+# Write & Edit Operation Schemas (Part 3)
+# ==========================================
+
+
+class WriteFileInput(BaseModel):
+    file_path: str = Field(..., description="Relative path to target file from project root")
+    project_path: str = Field(".", description="Absolute or relative path to project root")
+    content: str = Field(..., description="Content to write into the file")
+    overwrite: bool = Field(False, description="Whether to overwrite existing file (default False)")
+    create_parents: bool = Field(False, description="Whether to create missing parent directories (default False)")
+    expected_hash: Optional[str] = Field(None, description="Expected SHA-256 hash of existing file for staleness check")
+    dry_run: bool = Field(False, description="If True, preview changes with diff without writing to disk")
+
+
+class WriteFileOutput(BaseModel):
+    file_path: str = Field(..., description="Relative path to the file")
+    created: bool = Field(..., description="True if a new file was created")
+    overwritten: bool = Field(..., description="True if an existing file was overwritten")
+    bytes_written: int = Field(..., description="Number of bytes written or would be written")
+    new_hash: str = Field(..., description="SHA-256 hex digest of the new file content")
+    diff: Optional[str] = Field(None, description="Unified diff preview (for overwrites)")
+    dry_run: bool = Field(False, description="True if operation was dry-run preview only")
+
+
+class EditOperation(BaseModel):
+    old_string: str = Field(..., min_length=1, description="Exact string to find and replace in the file")
+    new_string: str = Field(..., description="Replacement string (empty string deletes old_string)")
+    replace_all: bool = Field(False, description="If True, replace all occurrences; if False, fail if old_string is not unique")
+
+
+class EditFileInput(BaseModel):
+    file_path: str = Field(..., description="Relative path to target file from project root")
+    project_path: str = Field(".", description="Absolute or relative path to project root")
+    edits: List[EditOperation] = Field(..., min_length=1, max_length=50, description="List of 1-50 edit operations to apply sequentially")
+    expected_hash: Optional[str] = Field(None, description="Expected SHA-256 hash of existing file for staleness check")
+    dry_run: bool = Field(False, description="If True, preview changes with diff without writing to disk")
+
+
+class EditFileOutput(BaseModel):
+    file_path: str = Field(..., description="Relative path to the file")
+    edits_applied: int = Field(..., description="Number of edit operations successfully applied")
+    replacements_made: int = Field(..., description="Total string replacements made across all edits")
+    diff: str = Field(..., description="Unified diff of the changes")
+    new_hash: str = Field(..., description="SHA-256 hex digest of the file after edits")
+    dry_run: bool = Field(False, description="True if operation was dry-run preview only")

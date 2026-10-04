@@ -2,6 +2,13 @@ from typing import Optional
 from services.read_service import read_one
 from models.schemas import ReadFileOutput
 
+annotations = {
+    "readOnlyHint": True,
+    "destructiveHint": False,
+    "idempotentHint": True,
+    "openWorldHint": False,
+}
+
 
 def read_file(
     file_path: str,

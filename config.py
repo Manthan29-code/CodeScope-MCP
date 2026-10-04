@@ -50,7 +50,30 @@ DEFAULT_IGNORE_PATTERNS: List[str] = [
     "*.lock",
     "package-lock.json",
     "yarn.lock",
-    "pnpm-lock.yaml",
     ".DS_Store",
     "Thumbs.db",
+]
+
+# Write Operations Settings (Part 3)
+ENABLE_WRITE_TOOLS: bool = os.getenv("ENABLE_WRITE_TOOLS", "false").lower() in ("true", "1", "yes")
+
+_allowed_roots_raw = os.getenv("WRITE_ALLOWED_ROOTS", "").strip()
+WRITE_ALLOWED_ROOTS: List[str] = [
+    r.strip() for r in _allowed_roots_raw.split(os.pathsep) if r.strip()
+] if _allowed_roots_raw else []
+
+MAX_WRITE_SIZE_BYTES: int = int(os.getenv("MAX_WRITE_SIZE_BYTES", "1000000"))
+MAX_EDITS_PER_CALL: int = int(os.getenv("MAX_EDITS_PER_CALL", "50"))
+MAX_DIFF_CHARS: int = int(os.getenv("MAX_DIFF_CHARS", "20000"))
+BLOCK_WRITES_TO_IGNORED: bool = os.getenv("BLOCK_WRITES_TO_IGNORED", "true").lower() in ("true", "1", "yes")
+
+PROTECTED_PATH_PATTERNS: List[str] = [
+    ".git/",
+    ".env",
+    ".env.*",
+    "!.env.example",
+    "*.pem",
+    "*.key",
+    "id_rsa*",
+    "id_ed25519*",
 ]
