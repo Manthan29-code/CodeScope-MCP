@@ -99,13 +99,14 @@ class SearchFilesOutput(BaseModel):
 
 
 class WriteFileInput(BaseModel):
-    file_path: str = Field(..., description="Relative path to target file from project root")
-    project_path: str = Field(".", description="Absolute or relative path to project root")
-    content: str = Field(..., description="Content to write into the file")
-    overwrite: bool = Field(False, description="Whether to overwrite existing file (default False)")
-    create_parents: bool = Field(False, description="Whether to create missing parent directories (default False)")
+    file_path: str = Field(..., description="Relative path to target file from project_path (e.g. 'index.html' or 'css/style.css', do not repeat project folder name)")
+    project_path: str = Field(".", description="Absolute or relative path to project root (e.g. 'C:\\MyProject\\WorkPulse')")
+    content: str = Field(..., description="String content to write into the file")
+    overwrite: bool = Field(False, description="Set to True to allow overwriting an existing file (default False)")
+    create_parents: bool = Field(False, description="Set to True to automatically create missing parent directories (e.g. css/, js/modules/)")
     expected_hash: Optional[str] = Field(None, description="Expected SHA-256 hash of existing file for staleness check")
     dry_run: bool = Field(False, description="If True, preview changes with diff without writing to disk")
+
 
 
 class WriteFileOutput(BaseModel):

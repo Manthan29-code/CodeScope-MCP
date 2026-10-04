@@ -22,20 +22,21 @@ def write_file(
     """
     Creates a new file or completely overwrites an existing file.
     
-    Guidelines:
-      - Prefer edit_file for updating existing files to avoid rewriting large content.
-      - Use overwrite=True only for complete file rewrites.
-      - Pass expected_hash (obtained from read_file) to avoid clobbering newer concurrent changes.
-      - Use dry_run=True to preview the write operation and inspect diffs without modifying disk.
+    Guidelines for AI Agents:
+      - Always set create_parents=True when writing files located in subdirectories (e.g. 'css/variables.css', 'js/modules/state.js') so parent directories are created automatically.
+      - file_path must be relative to project_path (e.g. if project_path='C:\\MyProject\\WorkPulse', use file_path='css/style.css', NOT 'WorkPulse/css/style.css').
+      - Set overwrite=True if the target file already exists and you want to replace it.
+      - Prefer edit_file for partial updates to existing files.
+      - Use dry_run=True to preview diffs before writing to disk.
     
     Args:
-        file_path: Relative path to target file from project root.
-        content: String content to write.
+        file_path: Relative path to target file from project_path (e.g. 'index.html' or 'css/base.css').
+        content: String content to write into the file.
         project_path: Absolute or relative path to project root (default ".").
         overwrite: Set to True to allow replacing an existing file (default False).
-        create_parents: Set to True to automatically create missing parent directories (default False).
+        create_parents: Always set to True when target file is inside subdirectories that may not exist yet.
         expected_hash: Optional SHA-256 hash from read_file for staleness check.
-        dry_run: If True, previews changes without modifying disk (default False).
+        dry_run: If True, previews changes with unified diff without modifying disk (default False).
     """
     return write_one(
         project_path=project_path,
