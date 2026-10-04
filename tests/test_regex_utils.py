@@ -54,10 +54,10 @@ def test_matches_empty():
 
 @pytest.mark.skipif(not HAS_REGEX_MODULE, reason="PyPI 'regex' package is required for timeout guard tests")
 def test_catastrophic_backtracking_timeout(monkeypatch):
-    monkeypatch.setattr(config, "REGEX_TIMEOUT_SECONDS", 0.1)
-    # Classic catastrophic backtracking regex
-    pattern = compile_pattern(r"(a+)+$", regex_mode=True)
-    evil_text = "a" * 35 + "!"
+    monkeypatch.setattr(config, "REGEX_TIMEOUT_SECONDS", 0.05)
+    # Branching exponential backtracking pattern (a|aa)+$ on non-matching text
+    pattern = compile_pattern(r"(a|aa)+$", regex_mode=True)
+    evil_text = "a" * 32 + "!"
 
     with pytest.raises(RegexTimeoutError, match="timed out"):
         safe_search(pattern, evil_text)
