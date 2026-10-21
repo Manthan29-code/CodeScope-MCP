@@ -1,4 +1,5 @@
 from typing import List, Optional
+import config
 from core import write_guard
 from core import path_security
 from core import file_writer
@@ -53,6 +54,11 @@ def edit_one(
 
     if not edits:
         raise ValueError("edits list cannot be empty.")
+
+    if len(edits) > config.MAX_EDITS_PER_CALL:
+        raise ValueError(
+            f"Number of edits ({len(edits)}) exceeds maximum allowed limit MAX_EDITS_PER_CALL ({config.MAX_EDITS_PER_CALL})."
+        )
 
     # 4. Sequentially apply edits in memory
     current_text = style.text

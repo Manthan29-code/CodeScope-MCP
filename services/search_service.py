@@ -21,7 +21,7 @@ def iter_searchable_files(
     """
     root_path = project_root.resolve()
     if subpath:
-        start_dir = resolve_and_verify(str(root_path), subpath)
+        start_dir = resolve_and_verify(str(root_path), subpath, check_read_roots=False)
         if not start_dir.is_dir():
             return
     else:

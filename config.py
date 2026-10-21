@@ -54,13 +54,40 @@ DEFAULT_IGNORE_PATTERNS: List[str] = [
     "Thumbs.db",
 ]
 
+def _parse_roots(raw_str: str) -> List[str]:
+    if not raw_str:
+        return []
+    if os.pathsep in raw_str:
+        tokens = raw_str.split(os.pathsep)
+    elif "," in raw_str:
+        tokens = raw_str.split(",")
+    else:
+        tokens = [raw_str]
+    return [t.strip() for t in tokens if t.strip()]
+
+
+# Project Roots & Access Control (SEC-002)
+_central_roots_raw = os.getenv("ALLOWED_PROJECT_ROOTS", "").strip()
+ALLOWED_PROJECT_ROOTS: List[str] = _parse_roots(_central_roots_raw)
+
+_read_roots_raw = os.getenv("READ_ALLOWED_ROOTS", "").strip()
+if _read_roots_raw:
+    READ_ALLOWED_ROOTS: List[str] = _parse_roots(_read_roots_raw)
+elif ALLOWED_PROJECT_ROOTS:
+    READ_ALLOWED_ROOTS: List[str] = list(ALLOWED_PROJECT_ROOTS)
+else:
+    READ_ALLOWED_ROOTS: List[str] = []
+
 # Write Operations Settings (Part 3)
 ENABLE_WRITE_TOOLS: bool = os.getenv("ENABLE_WRITE_TOOLS", "false").lower() in ("true", "1", "yes")
 
 _allowed_roots_raw = os.getenv("WRITE_ALLOWED_ROOTS", "").strip()
-WRITE_ALLOWED_ROOTS: List[str] = [
-    r.strip() for r in _allowed_roots_raw.split(os.pathsep) if r.strip()
-] if _allowed_roots_raw else []
+if _allowed_roots_raw:
+    WRITE_ALLOWED_ROOTS: List[str] = _parse_roots(_allowed_roots_raw)
+elif ALLOWED_PROJECT_ROOTS:
+    WRITE_ALLOWED_ROOTS: List[str] = list(ALLOWED_PROJECT_ROOTS)
+else:
+    WRITE_ALLOWED_ROOTS: List[str] = []
 
 MAX_WRITE_SIZE_BYTES: int = int(os.getenv("MAX_WRITE_SIZE_BYTES", "1000000"))
 MAX_EDITS_PER_CALL: int = int(os.getenv("MAX_EDITS_PER_CALL", "50"))

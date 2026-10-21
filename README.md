@@ -322,10 +322,14 @@ MAX_FILE_SIZE_BYTES=10485760   # 10 MB limit
 MAX_LINES_PER_READ=1000        # Max lines returned per read call
 ALLOW_SYMLINKS=false           # Prevent symlink escapes
 
+# Access Control & Allowed Roots (SEC-002)
+ALLOWED_PROJECT_ROOTS=C:\MyProject   # Central allowlist for both read & write operations
+READ_ALLOWED_ROOTS=C:\MyProject      # Semicolon-separated allowlist of readable folders (optional override)
+
 # Write Operations Settings (Opt-in)
 ENABLE_WRITE_TOOLS=true
-WRITE_ALLOWED_ROOTS=C:\MyProject   # Semicolon-separated allowlist of writable folders
-MAX_WRITE_SIZE_BYTES=1000000       # 1 MB write limit per file
+WRITE_ALLOWED_ROOTS=C:\MyProject     # Semicolon-separated allowlist of writable folders
+MAX_WRITE_SIZE_BYTES=1000000         # 1 MB write limit per file
 MAX_EDITS_PER_CALL=50
 MAX_DIFF_CHARS=50000
 BLOCK_WRITES_TO_IGNORED=true
@@ -335,8 +339,8 @@ MAX_REGEX_PATTERN_LENGTH=500
 ```
 
 > [!IMPORTANT]
-> **`WRITE_ALLOWED_ROOTS` Security Gate**:
-> All write tools operate in a **fail-closed** mode. If `WRITE_ALLOWED_ROOTS` is empty or if `project_path` is not inside an allowlisted folder, all write operations are refused. Setting `WRITE_ALLOWED_ROOTS=C:\MyProject` allows writing to any workspace inside `C:\MyProject\` (e.g., `C:\MyProject\WorkPulse`).
+> **`READ_ALLOWED_ROOTS` & `WRITE_ALLOWED_ROOTS` Security Gates**:
+> Both read tools (`read_file`, `search_files`, `list_directory_tree`, `get_file_metadata`, `read_multiple_files`) and write tools operate in a strict **fail-closed** mode. If `READ_ALLOWED_ROOTS` (or `ALLOWED_PROJECT_ROOTS`) is empty or if `project_path` is not inside an allowlisted folder, read operations are refused with an access denied error. Similarly, `WRITE_ALLOWED_ROOTS` guards all write tools. Setting `ALLOWED_PROJECT_ROOTS=C:\MyProject` enables safe access to any workspace inside `C:\MyProject\` while blocking unauthorized host directory access.
 
 ---
 
@@ -496,7 +500,7 @@ Add CodeScope to your MCP client configuration (such as Cursor, Claude Desktop, 
 
 ## 🔒 Security & Constraints
 
-- **Fail-Closed Write Allowlist**: Writes are strictly bounded by `WRITE_ALLOWED_ROOTS`. Attempts to access unauthorized paths or root drives are refused.
+- **Fail-Closed Read & Write Allowlists**: File operations are strictly bounded by `READ_ALLOWED_ROOTS` and `WRITE_ALLOWED_ROOTS` (or centralized `ALLOWED_PROJECT_ROOTS`). Read and write requests to unauthorized roots, sibling directories, or raw drive/filesystem roots (`C:\`, `/`) are strictly refused.
 - **Protected Path Shield**: Protects `.git/`, `.env`, private keys (`*.pem`, `*.key`, `id_rsa*`) from being read, written, or modified.
 - **Strict Path Containment**: Resolves all relative paths against the provided `project_path`. Attempts to escape the directory via `../` or absolute path jumps raise security exceptions.
 - **Symlink Refusal**: Rejects symlinks by default (`ALLOW_SYMLINKS=false`) to prevent filesystem traversal via aliased paths.

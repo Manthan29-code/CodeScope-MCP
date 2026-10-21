@@ -1,6 +1,7 @@
 import unittest
 from pathlib import Path
 import tempfile
+import config
 from services.search_service import search
 
 
@@ -8,6 +9,8 @@ class TestSearchService(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.root_path = Path(self.temp_dir.name).resolve()
+        self.orig_read_roots = list(config.READ_ALLOWED_ROOTS)
+        config.READ_ALLOWED_ROOTS = [str(self.root_path)]
         
         src_dir = self.root_path / "src"
         src_dir.mkdir()
@@ -19,6 +22,7 @@ class TestSearchService(unittest.TestCase):
         self.js_file.write_text("console.log('Hello JS');\n")
 
     def tearDown(self):
+        config.READ_ALLOWED_ROOTS = self.orig_read_roots
         self.temp_dir.cleanup()
 
     def test_search_content_match(self):
@@ -73,6 +77,17 @@ class TestSearchService(unittest.TestCase):
 
         sub_files = list(iter_searchable_files(self.root_path, subpath="src"))
         self.assertEqual(len(sub_files), 2)
+
+    def test_search_unauthorized_root_raises(self):
+        other_temp = tempfile.TemporaryDirectory()
+        try:
+            other_path = Path(other_temp.name).resolve()
+            (other_path / "app.py").write_text("def secret(): pass")
+            from core.path_security import ReadRootNotAllowedError
+            with self.assertRaises(ReadRootNotAllowedError):
+                search(str(other_path), query="secret")
+        finally:
+            other_temp.cleanup()
 
 
 if __name__ == "__main__":

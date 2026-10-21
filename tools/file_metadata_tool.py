@@ -19,6 +19,6 @@ def get_file_metadata(
     
     Args:
         file_path: Relative path to target file from project root.
-        project_path: Absolute or relative path to project root (default ".").
+        project_path: Absolute or relative path to project root (default "."). Must be within configured READ_ALLOWED_ROOTS.
     """
     return get_metadata(project_path, file_path)

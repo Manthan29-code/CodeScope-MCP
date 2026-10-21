@@ -29,20 +29,77 @@ def is_within(parent: Union[str, Path], child: Union[str, Path]) -> bool:
         return False
 
 
+class ReadRootNotAllowedError(PermissionError, ValueError):
+    """Raised when project path is not in READ_ALLOWED_ROOTS or is a filesystem root."""
+    pass
+
+
+def verify_read_root(root: Union[str, Path]) -> Path:
+    """
+    Validates that root is an approved directory within config.READ_ALLOWED_ROOTS,
+    and is not a raw filesystem/drive root.
+
+    Raises:
+        ValueError: If root is empty or does not exist or is not a directory.
+        ReadRootNotAllowedError: If root is a filesystem/drive root or not within READ_ALLOWED_ROOTS.
+    """
+    if not root or not str(root).strip():
+        raise ValueError("project_path must be a non-empty string.")
+
+    root_p = Path(root).resolve()
+
+    if not root_p.exists():
+        raise ValueError(f"Project root directory does not exist: '{root}'")
+    if not root_p.is_dir():
+        raise ValueError(f"Project root path is not a directory: '{root}'")
+
+    # Reject filesystem root or drive root
+    if root_p.parent == root_p or str(root_p) in ("/", "\\") or re.match(r"^[a-zA-Z]:[\\/]?$", str(root_p)):
+        raise ReadRootNotAllowedError(f"Cannot perform read operations directly on filesystem or drive root: '{root_p}'")
+
+    if not config.READ_ALLOWED_ROOTS:
+        raise ReadRootNotAllowedError(
+            "Read operations refused: READ_ALLOWED_ROOTS is empty. Add project root to READ_ALLOWED_ROOTS in .env or config."
+        )
+
+    # Check if root is contained within any allowed root
+    is_allowed = False
+    for allowed_str in config.READ_ALLOWED_ROOTS:
+        if not allowed_str or not allowed_str.strip():
+            continue
+        try:
+            allowed_p = Path(allowed_str.strip()).resolve()
+            if is_within(allowed_p, root_p):
+                is_allowed = True
+                break
+        except Exception:
+            continue
+
+    if not is_allowed:
+        raise ReadRootNotAllowedError(
+            f"Access denied: Project path '{root_p}' is not within any allowed root in READ_ALLOWED_ROOTS: {config.READ_ALLOWED_ROOTS}"
+        )
+
+    return root_p
+
+
 def resolve_and_verify(
     project_root: str,
     relative_path: str = "",
-    fallback_to_default: bool = True
+    fallback_to_default: bool = True,
+    check_read_roots: bool = True
 ) -> Path:
     """
     Resolves project_root and relative_path into an absolute Path,
-    verifying that the resolved target path does NOT escape the project_root directory.
+    verifying that the resolved target path does NOT escape the project_root directory
+    and that project_root is within the approved READ_ALLOWED_ROOTS.
 
     If the requested project_root does not exist on this machine (e.g. when a remote
     LLM passes a virtual container path like /working_dir/...), it gracefully falls
     back to the server's configured DEFAULT_PROJECT_PATH.
 
     Raises:
+        ReadRootNotAllowedError: If project_root is not inside READ_ALLOWED_ROOTS or is a filesystem root.
         ValueError: If project_root is invalid or target escapes project_root.
         PermissionError: If symlinks are disallowed and a symlink is detected.
     """
@@ -77,6 +134,10 @@ def resolve_and_verify(
             if not root_path.is_dir():
                 raise ValueError(f"Project root path is not a directory: {project_root}")
 
+    # Verify project_root against READ_ALLOWED_ROOTS if enabled
+    if check_read_roots:
+        root_path = verify_read_root(root_path)
+
     # Clean relative path string
     rel_clean = relative_path.strip().lstrip("/\\") if relative_path else ""
     target_path = (root_path / rel_clean).resolve()
@@ -85,6 +146,10 @@ def resolve_and_verify(
     try:
         target_path.relative_to(root_path)
     except ValueError:
+        raise ValueError(
+            f"Security Error: Access denied. Path '{relative_path}' escapes project root '{root_path}'."
+        )
+    if not is_within(root_path, target_path):
         raise ValueError(
             f"Security Error: Access denied. Path '{relative_path}' escapes project root '{root_path}'."
         )

@@ -15,7 +15,7 @@ def delete_one(project_path: str, file_path: str) -> DeleteFileOutput:
     Validates permissions, path containment, and protection rules.
     """
     root = write_guard.begin_write(project_path)
-    target = path_security.resolve_and_verify(str(root), file_path)
+    target = path_security.resolve_and_verify(str(root), file_path, check_read_roots=False)
 
     if target.is_dir():
         raise ValueError(f"Directories are not supported; delete_file operates on single files only: '{file_path}'")
@@ -48,7 +48,7 @@ def move_one(
     Validates containment, protected rules, and prevents unintended overwrites.
     """
     root = write_guard.begin_write(project_path)
-    src_target = path_security.resolve_and_verify(str(root), source_path)
+    src_target = path_security.resolve_and_verify(str(root), source_path, check_read_roots=False)
 
     if src_target.is_dir():
         raise ValueError(f"Directories are not supported; move_file operates on single files only: '{source_path}'")
@@ -103,7 +103,7 @@ def copy_one(
     Validates containment, size limits, and protection rules.
     """
     root = write_guard.begin_write(project_path)
-    src_target = path_security.resolve_and_verify(str(root), source_path)
+    src_target = path_security.resolve_and_verify(str(root), source_path, check_read_roots=False)
 
     if src_target.is_dir():
         raise ValueError(f"Directories are not supported; copy_file operates on single files only: '{source_path}'")

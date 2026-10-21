@@ -21,7 +21,7 @@ def read_file(
     
     Args:
         file_path: Relative path to target file from project root.
-        project_path: Absolute or relative path to project root (default ".").
+        project_path: Absolute or relative path to project root (default "."). Must be within configured READ_ALLOWED_ROOTS.
         offset: 0-indexed line offset to start reading from (default 0).
         limit: Maximum number of lines to read (defaults to server MAX_LINES_PER_READ).
     """

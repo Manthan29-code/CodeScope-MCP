@@ -13,8 +13,11 @@ class TestPathSecurity(unittest.TestCase):
         self.root_path = Path(self.temp_dir.name).resolve()
         self.test_file = self.root_path / "hello.txt"
         self.test_file.write_text("hello world")
+        self.orig_read_roots = list(config.READ_ALLOWED_ROOTS)
+        config.READ_ALLOWED_ROOTS = [str(self.root_path), config.DEFAULT_PROJECT_PATH]
 
     def tearDown(self):
+        config.READ_ALLOWED_ROOTS = self.orig_read_roots
         self.temp_dir.cleanup()
 
     def test_valid_contained_path(self):
@@ -37,6 +40,23 @@ class TestPathSecurity(unittest.TestCase):
         # Should fallback to server DEFAULT_PROJECT_PATH without crashing
         resolved = resolve_and_verify("/fake/remote/working_dir", "", fallback_to_default=True)
         self.assertTrue(resolved.exists())
+
+    def test_unauthorized_root_rejected(self):
+        other_temp = tempfile.TemporaryDirectory()
+        try:
+            other_path = Path(other_temp.name).resolve()
+            (other_path / "secret.txt").write_text("secret")
+            from core.path_security import ReadRootNotAllowedError
+            with self.assertRaises(ReadRootNotAllowedError):
+                resolve_and_verify(str(other_path), "secret.txt")
+        finally:
+            other_temp.cleanup()
+
+    def test_filesystem_root_rejected(self):
+        from core.path_security import ReadRootNotAllowedError
+        drive_root = "C:\\" if os.name == "nt" else "/"
+        with self.assertRaises(ReadRootNotAllowedError):
+            resolve_and_verify(drive_root, "")
 
 
 class TestResolveForWrite(unittest.TestCase):

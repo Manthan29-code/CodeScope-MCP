@@ -20,7 +20,7 @@ def list_directory_tree(
     Excludes gitignored / junk directories (.venv, node_modules, .git, etc.) to save context.
     
     Args:
-        project_path: Absolute or relative path to project root (default ".").
+        project_path: Absolute or relative path to project root (default "."). Must be within configured READ_ALLOWED_ROOTS.
         max_depth: Optional depth cap for directory walking.
         include_hidden: Whether to include hidden files/folders (default False).
     """

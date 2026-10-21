@@ -25,6 +25,15 @@ mcp.add_tool(read_file)
 mcp.add_tool(read_multiple_files)
 mcp.add_tool(search_files)
 
+if not config.READ_ALLOWED_ROOTS:
+    logger.warning(
+        "READ_ALLOWED_ROOTS is empty. All read operations will be refused until allowed roots are configured."
+    )
+else:
+    logger.info(
+        f"Read tools initialized with allowed roots: {config.READ_ALLOWED_ROOTS}"
+    )
+
 # Conditionally Register Write Tools (Parts 3 & 4)
 if config.ENABLE_WRITE_TOOLS:
     from tools.write_file_tool import write_file

@@ -26,7 +26,7 @@ def search_files(
     
     Args:
         query: Search string or regex pattern to look for.
-        project_path: Absolute or relative path to project root (default ".").
+        project_path: Absolute or relative path to project root (default "."). Must be within configured READ_ALLOWED_ROOTS.
         search_type: "content" (grep inside files) or "filename" (match file names).
         file_pattern: Optional glob filter e.g. '*.py' or '*.ts'.
         case_sensitive: Whether search should be case sensitive (default False).

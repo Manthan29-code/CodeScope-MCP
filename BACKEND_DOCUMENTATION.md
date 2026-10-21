@@ -230,7 +230,7 @@ Important protections include:
 
 - Project-root containment and traversal prevention.
 - Optional symlink rejection.
-- `WRITE_ALLOWED_ROOTS` allowlisting.
+- `READ_ALLOWED_ROOTS` and `WRITE_ALLOWED_ROOTS` (or centralized `ALLOWED_PROJECT_ROOTS`) allowlisting.
 - Protected path patterns for `.git`, `.env`, keys, and certificates.
 - `.gitignore` and default-ignore filtering.
 - File-size and regex-complexity limits.
@@ -248,6 +248,7 @@ The main architecture and security behaviors are covered by focused tests:
 | --- | --- |
 | Tool registration and write gating | `tests/test_server_registration.py` |
 | Path containment and symlink policy | `tests/test_path_security.py` |
+| Read authorization and allowed roots | `tests/test_read_guard.py` |
 | Write permissions and protected paths | `tests/test_write_guard.py` |
 | File creation, overwrite, dry-run, hashes, and styles | `tests/test_write_service.py` |
 | Exact edits and ambiguity handling | `tests/test_edit_service.py` |

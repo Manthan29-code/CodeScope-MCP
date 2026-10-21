@@ -13,8 +13,10 @@ def _clear_caches():
 
 
 @pytest.fixture
-def project(tmp_path):
+def project(tmp_path, monkeypatch):
     """A small realistic project. Returns its root Path."""
+    monkeypatch.setattr(config, "READ_ALLOWED_ROOTS", [str(tmp_path)])
+
     def put(rel, data):
         p = tmp_path / rel
         p.parent.mkdir(parents=True, exist_ok=True)
@@ -41,6 +43,7 @@ def project(tmp_path):
 def write_enabled(monkeypatch, project):
     monkeypatch.setattr(config, "ENABLE_WRITE_TOOLS", True)
     monkeypatch.setattr(config, "WRITE_ALLOWED_ROOTS", [str(project)])
+    monkeypatch.setattr(config, "READ_ALLOWED_ROOTS", [str(project)])
     return project
 
 

@@ -2,6 +2,7 @@ import hashlib
 import unittest
 from pathlib import Path
 import tempfile
+import config
 from services.read_service import read_one, read_many
 
 
@@ -9,6 +10,8 @@ class TestReadService(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.root_path = Path(self.temp_dir.name).resolve()
+        self.orig_read_roots = list(config.READ_ALLOWED_ROOTS)
+        config.READ_ALLOWED_ROOTS = [str(self.root_path)]
         
         # Create test text file
         self.file1 = self.root_path / "file1.txt"
@@ -19,6 +22,7 @@ class TestReadService(unittest.TestCase):
         self.bin_file.write_bytes(b"\x00\x01\x02\x03\x04")
 
     def tearDown(self):
+        config.READ_ALLOWED_ROOTS = self.orig_read_roots
         self.temp_dir.cleanup()
 
     def test_read_one_success(self):
@@ -67,6 +71,17 @@ class TestReadService(unittest.TestCase):
         self.file1.write_bytes(b"modified content")
         hash2 = read_one(str(self.root_path), "file1.txt").content_hash
         self.assertNotEqual(hash1, hash2)
+
+    def test_read_unauthorized_root_returns_error(self):
+        other_temp = tempfile.TemporaryDirectory()
+        try:
+            other_path = Path(other_temp.name).resolve()
+            (other_path / "leak.txt").write_text("secret leaked")
+            res = read_one(str(other_path), "leak.txt")
+            self.assertIsNotNone(res.error)
+            self.assertIn("not within any allowed root in READ_ALLOWED_ROOTS", res.error)
+        finally:
+            other_temp.cleanup()
 
 
 if __name__ == "__main__":
