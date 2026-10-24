@@ -359,3 +359,10 @@ MAX_REGEX_PATTERN_LENGTH=500
 
 3. **Protected Paths cannot be overridden**:
    - Regardless of `.env` settings, protected path patterns (`.git/`, `.env`, `.env.*`, `*.pem`, `*.key`, `id_rsa*`) are hardcoded in [`config.py`](file:///c:/MyProject/CodeScope%20MCP/config.py#L70-L80) and can **never** be written to or modified by AI tools.
+
+---
+
+## 🔗 Related Documentation
+- [README.md](file:///c:/MyProject/CodeScope%20MCP/README.md) — Main repository overview, features, and quickstart.
+- [REMOTE_CONNECTORS_GUIDE.md](file:///c:/MyProject/CodeScope%20MCP/REMOTE_CONNECTORS_GUIDE.md) — Step-by-step connection guide for Claude.ai, ChatGPT, and Google Gemini via ngrok.
+- [BACKEND_DOCUMENTATION.md](file:///c:/MyProject/CodeScope%20MCP/BACKEND_DOCUMENTATION.md) — Deep dive into internal architecture and tools.

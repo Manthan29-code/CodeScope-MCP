@@ -1,8 +1,8 @@
 # 🔭 CodeScope MCP
 
-> **Intelligent, Token-Optimized Codebase Context MCP Server for AI Agents & LLMs.**
+> **Intelligent, Token-Optimized Codebase Context MCP Server Built for Cloud Chat LLMs (Claude, ChatGPT, Gemini).**
 
-CodeScope MCP provides LLMs and AI assistants with controlled, intelligent, and context-efficient access to local codebases over the **Model Context Protocol (MCP)** using **Streamable HTTP transport**.
+CodeScope MCP provides cloud-based Chat LLM applications with controlled, intelligent, and context-efficient access to local codebases over the **Model Context Protocol (MCP)** using **Streamable HTTP transport**.
 
 Instead of naively dumping entire folders or overwhelming context windows with garbage files (`node_modules`, `.venv`, binaries, lock files), CodeScope acts as a security and context firewall, offering a layered toolset for codebase exploration, code search, and file retrieval.
 
@@ -11,6 +11,7 @@ Instead of naively dumping entire folders or overwhelming context windows with g
 ## 📑 Table of Contents
 
 - [What This Is About](#-what-this-is-about)
+- [Target Audience: Built for Cloud Chat LLMs (Not for AI IDEs)](#-target-audience-built-for-cloud-chat-llms-not-for-ai-ides)
 - [Why You Should Use It](#-why-you-should-use-it)
 - [What It Does (Core Tools)](#-what-it-does-core-tools)
 - [Architecture Overview](#-architecture-overview)
@@ -25,6 +26,8 @@ Instead of naively dumping entire folders or overwhelming context windows with g
 - [Working with Write Tools & AI Prompting](#-working-with-write-tools--ai-prompting)
 - [Exposing with ngrok (Remote / Cloud Setup)](#-exposing-with-ngrok-remote--cloud-setup)
 - [Connecting to MCP Clients](#-connecting-to-mcp-clients)
+  - [Remote Connectors Guide (Claude, ChatGPT, Gemini)](REMOTE_CONNECTORS_GUIDE.md)
+- [Cross-Platform Support (macOS, Linux & Windows)](#-cross-platform-support-macos-linux--windows)
 - [Security & Constraints](#-security--constraints)
 - [Running Tests](#-running-tests)
 - [License](#-license)
@@ -41,6 +44,22 @@ When using AI coding assistants or LLM chat agents over MCP, granting raw filesy
 4. **Security Vulnerabilities**: Path traversal attacks (e.g. `../../../../etc/passwd` or accessing sensitive files outside project roots).
 
 **CodeScope MCP** bridges this gap. It provides a standardized MCP server built on **FastMCP** with **Streamable HTTP** that delivers smart, token-efficient, `.gitignore`-aware file reading, fast code/regex search, and metadata analysis.
+
+---
+
+## 🎯 Target Audience: Built for Cloud Chat LLMs (Not for AI IDEs)
+
+> [!IMPORTANT]
+> **CodeScope MCP is made strictly for web-based Cloud Chat LLMs (Claude.ai, ChatGPT, and Google Gemini). There is NO point or meaning in using it with AI IDEs (such as Antigravity, Cursor, or Windsurf).**
+
+### Why There Is No Meaning in Using CodeScope MCP with AI IDEs:
+- **AI IDEs (Antigravity, Cursor, Windsurf, Copilot Workspace)**:
+  These applications execute **directly on your host machine**. They already possess native, unrestricted operating system access to your filesystem, integrated terminals, git version control, live file watchers, and direct code editing in the workspace. Configuring an external HTTP MCP server like CodeScope in an AI IDE is **completely redundant and meaningless**, because the IDE already has direct access to read, search, and edit your local files natively.
+- **Cloud Chat LLMs (Claude.ai, ChatGPT Web, Google Gemini Web)**:
+  In sharp contrast, cloud chat web applications run in **remote, isolated data centers with zero access to your local machine**. By default, they are completely incapable of reading local files, searching code, or modifying files on your computer. Developers are normally forced to manually copy-paste snippets back and forth into chat prompts.
+
+**CodeScope MCP is created solely to solve this limitation for Cloud Chat LLMs**:
+By running CodeScope MCP locally on your machine and establishing a secure **ngrok tunnel** (`https://<subdomain>.ngrok-free.app/mcp`), you grant cloud Chat LLMs the ability to explore, read, search, and edit your local project directly from your browser chat window—protected by strict allowlists (`READ_ALLOWED_ROOTS` and `WRITE_ALLOWED_ROOTS`).
 
 ---
 
@@ -484,11 +503,46 @@ https://<your-ngrok-subdomain>.ngrok-free.app/mcp
 > [!WARNING]
 > Always append `/mcp` to your URL in the MCP client settings (e.g. `https://xxxx.ngrok-free.app/mcp`). Accessing the root path `/` will return `404 Not Found`.
 
----
-
 ## 🔌 Connecting to MCP Clients
 
-Add CodeScope to your MCP client configuration (such as Cursor, Claude Desktop, LibreChat, or custom MCP agents):
+### 🌐 Connecting to Cloud Chat LLMs (Claude, ChatGPT & Gemini)
+
+CodeScope MCP is optimized for cloud-based Chat LLMs. Once your ngrok tunnel is live and you have your endpoint (`https://<your-subdomain>.ngrok-free.app/mcp`), you can connect directly:
+
+> [!IMPORTANT]
+> **Authentication: Always select "No authentication" (or "None")!**
+> CodeScope MCP does not use token authentication; host security is enforced via your private ngrok tunnel and server-side folder allowlists (`READ_ALLOWED_ROOTS` & `WRITE_ALLOWED_ROOTS`). Selecting Bearer/OAuth will cause connection failures.
+
+> 📖 **Comprehensive Walkthrough:** For complete step-by-step instructions, official documentation links, screenshots, and troubleshooting, read [**REMOTE_CONNECTORS_GUIDE.md**](REMOTE_CONNECTORS_GUIDE.md).
+
+#### 1. Claude.ai (Anthropic Remote Connectors)
+- **Where**: [claude.ai](https://claude.ai/) → **Settings** → **Connectors** → **Add custom connector**.
+- **Connector Name**: `CodeScope MCP`
+- **Remote MCP server URL**: `https://<your-subdomain>.ngrok-free.app/mcp` *(e.g. `https://a1b2-c3d4.ngrok-free.app/mcp`)*
+- **Authentication**: Leave as **None / No authentication**.
+- **Tools**: In chat, open **Search and tools**, enable the connector, and select your tools.
+- *Requirement*: Available on eligible Anthropic paid plans (Pro, Team, Enterprise).
+
+#### 2. ChatGPT (OpenAI Custom MCP Servers)
+- **Where**: [chatgpt.com](https://chatgpt.com/) → **Settings** → **Apps** → **Add custom MCP server**.
+- **Name**: `CodeScope MCP`
+- **Connection**: `https://<your-subdomain>.ngrok-free.app/mcp`
+- **Authentication**: Select **No authentication**.
+
+#### 3. Google Gemini (Gemini Web App)
+- **Where**: [gemini.google.com](https://gemini.google.com/) → **Settings (⚙️)** → **Connected Apps** → **Add a custom app / MCP Server**.
+- **MCP Server URL**: `https://<your-subdomain>.ngrok-free.app/mcp`
+- **Authentication**: Set to **None / No authentication**.
+- **Usage**: Authorize the connection, then in chat trigger tools using `@CodeScope` (e.g. `@CodeScope list files in my project`).
+
+---
+
+### 💻 Configuration for Standalone Chat Clients (e.g. Claude Desktop, LibreChat)
+
+> [!NOTE]
+> AI IDEs (Antigravity, Cursor, Windsurf) do **NOT** need this configuration since they have native filesystem access. This is intended only for desktop chat applications (e.g., Claude Desktop, LibreChat) that lack local project awareness.
+
+If you are connecting via a client configuration file:
 
 #### Local Setup (Streamable HTTP):
 ```json
@@ -512,6 +566,60 @@ Add CodeScope to your MCP client configuration (such as Cursor, Claude Desktop, 
     }
   }
 }
+```
+
+---
+
+## 🌐 Cross-Platform Support (macOS, Linux & Windows)
+
+CodeScope MCP is designed from the ground up to be **100% OS-independent**. It runs natively on **macOS** (both Apple Silicon M-series and Intel), **Linux**, and **Windows**.
+
+### Why It Works Seamlessly Across Operating Systems
+
+1. **Pure Cross-Platform Dependencies**:
+   - Built on `FastMCP`, `Pydantic v2`, `pathspec`, `python-dotenv`, and `chardet`—none of which have Windows-specific bindings or platform restrictions.
+   - Uses the `regex` module with automatic fallback to standard library `re`.
+
+2. **POSIX & macOS Native Path Handling**:
+   - All internal tool paths are normalized to POSIX forward slashes (`/`), ensuring seamless path matching across macOS, Linux, and Windows.
+   - Automatically supports POSIX absolute root paths (e.g. `/Users/username/project` or `/var/www`).
+
+3. **Dynamic Path Delimiters in `.env`**:
+   - Automatically detects OS path separators via Python's `os.pathsep`:
+     - **macOS / Linux**: Use colons `:` (e.g. `ALLOWED_PROJECT_ROOTS=/Users/alice/repo1:/opt/repo2`)
+     - **Windows**: Use semicolons `;` (e.g. `ALLOWED_PROJECT_ROOTS=C:\repo1;D:\repo2`)
+     - **Universal**: Comma-separated paths (`,`) are supported across all operating systems.
+
+4. **POSIX Permission Preservation**:
+   - When writing or editing files, `atomic_write_bytes()` uses `shutil.copymode()` to preserve POSIX file permissions (e.g. `chmod 0o755` executable scripts).
+   - Atomic replacement relies on the POSIX `rename(2)` syscall (`os.replace`) for safe file operations.
+
+5. **macOS Junk File Filtering**:
+   - Built-in ignore rules automatically filter `.DS_Store` (macOS Finder metadata) alongside `.git`, `node_modules`, and `Thumbs.db`.
+
+6. **APFS / Case-Preserving Filesystem Support**:
+   - Safe case-only file renaming (e.g. `Button.jsx` to `button.jsx`) is verified via inode checks (`samefile()`), preventing collisions on macOS APFS and Windows NTFS.
+
+#### Example macOS / Linux `.env` Configuration:
+
+```dotenv
+HOST=127.0.0.1
+PORT=8000
+DEFAULT_PROJECT_PATH=.
+
+# Access Control (POSIX paths)
+ALLOWED_PROJECT_ROOTS=/Users/yourname/MyProject:/Users/yourname/SharedLib
+
+# Write Operations
+ENABLE_WRITE_TOOLS=true
+WRITE_ALLOWED_ROOTS=/Users/yourname/MyProject
+MAX_WRITE_SIZE_BYTES=1000000
+MAX_EDITS_PER_CALL=50
+MAX_DIFF_CHARS=50000
+BLOCK_WRITES_TO_IGNORED=true
+MAX_FILES_PER_REPLACE=100
+REGEX_TIMEOUT_SECONDS=2.0
+MAX_REGEX_PATTERN_LENGTH=500
 ```
 
 ---
