@@ -20,6 +20,7 @@ Instead of naively dumping entire folders or overwhelming context windows with g
   - [Prerequisites](#prerequisites)
   - [Installation & Setup](#installation--setup)
   - [Environment Configuration](#environment-configuration)
+  - [Configuration & Sizing Guide](CONFIGURATION_GUIDE.md)
   - [Running the Server](#running-the-server)
 - [Working with Write Tools & AI Prompting](#-working-with-write-tools--ai-prompting)
 - [Exposing with ngrok (Remote / Cloud Setup)](#-exposing-with-ngrok-remote--cloud-setup)
@@ -341,6 +342,23 @@ MAX_REGEX_PATTERN_LENGTH=500
 > [!IMPORTANT]
 > **`READ_ALLOWED_ROOTS` & `WRITE_ALLOWED_ROOTS` Security Gates**:
 > Both read tools (`read_file`, `search_files`, `list_directory_tree`, `get_file_metadata`, `read_multiple_files`) and write tools operate in a strict **fail-closed** mode. If `READ_ALLOWED_ROOTS` (or `ALLOWED_PROJECT_ROOTS`) is empty or if `project_path` is not inside an allowlisted folder, read operations are refused with an access denied error. Similarly, `WRITE_ALLOWED_ROOTS` guards all write tools. Setting `ALLOWED_PROJECT_ROOTS=C:\MyProject` enables safe access to any workspace inside `C:\MyProject\` while blocking unauthorized host directory access.
+
+> [!TIP]
+> 📖 **Comprehensive Configuration & Project Sizing Guide**:  
+> For an in-depth breakdown of every setting, security implications, and specific configurations for **Small Projects (<100 files)**, **Medium Full-Stack Apps (100–1,500 files)**, and **Large Monorepos (1,500+ files)**, see the dedicated [**CONFIGURATION_GUIDE.md**](CONFIGURATION_GUIDE.md).
+
+#### Quick Project Sizing Reference
+
+| Setting | Small Project (<100 files) | Medium Project (Default) | Large Monorepo (1,500+ files) |
+| :--- | :--- | :--- | :--- |
+| `MAX_FILE_SIZE_BYTES` | `2097152` (2 MB) | `5242880` (5 MB) | `10485760` (10 MB) |
+| `MAX_LINES_PER_READ` | `500` lines | `1000` lines | `2000` – `3000` lines |
+| `MAX_WRITE_SIZE_BYTES` | `500000` (500 KB) | `1000000` (1 MB) | `3000000` – `5000000` (3–5 MB) |
+| `MAX_EDITS_PER_CALL` | `20` edits | `50` edits | `100` edits |
+| `MAX_DIFF_CHARS` | `20000` chars | `50000` chars | `100000` chars |
+| `MAX_FILES_PER_REPLACE` | `25` files | `100` files | `300` files |
+| `REGEX_TIMEOUT_SECONDS` | `1.0` s | `2.0` s | `3.0` – `4.0` s |
+| `MAX_REGEX_PATTERN_LENGTH` | `300` chars | `500` chars | `1000` chars |
 
 ---
 
