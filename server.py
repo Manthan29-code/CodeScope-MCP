@@ -65,3 +65,19 @@ if config.ENABLE_WRITE_TOOLS:
 else:
     logger.info("Write tools are disabled (ENABLE_WRITE_TOOLS=false).")
 
+# Conditionally Register Git Integration Tools
+if config.ENABLE_GIT_TOOLS:
+    from services.confirmation_service import ApprovalGate, ConfirmationService
+    from services.git_service import GitService
+    from tools.git_tools import register_git_tools
+
+    git_service = GitService(
+        config.PROJECT_ROOT,
+        timeout=config.GIT_COMMAND_TIMEOUT_SECONDS,
+        max_diff_lines=config.GIT_MAX_DIFF_LINES,
+        block_ignored=config.BLOCK_WRITES_TO_IGNORED,
+    )
+    gate = ApprovalGate(ConfirmationService(config.GIT_CONFIRM_TTL_SECONDS), mode=config.GIT_CONFIRM_MODE)
+    register_git_tools(mcp, git_service, gate, enable_write_tools=config.ENABLE_WRITE_TOOLS)
+    logger.info(f"Registered Git tools (write_enabled={config.ENABLE_WRITE_TOOLS}).")
+

@@ -9,6 +9,17 @@ load_dotenv()
 HOST: str = os.getenv("HOST", "127.0.0.1")
 PORT: int = int(os.getenv("PORT", "8000"))
 DEFAULT_PROJECT_PATH: str = os.getenv("DEFAULT_PROJECT_PATH", str(Path.cwd().resolve()))
+PROJECT_ROOT: Path = Path(DEFAULT_PROJECT_PATH).resolve()
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    return default if value is None else value.strip().lower() in {"1", "true", "yes", "on"}
+
+def _env_int(name: str, default: int) -> int:
+    try:
+        return int(os.getenv(name, str(default)))
+    except ValueError:
+        return default
 
 # Security & Constraints
 MAX_FILE_SIZE_BYTES: int = int(os.getenv("MAX_FILE_SIZE_BYTES", str(10 * 1024 * 1024)))  # 10 MB
@@ -103,10 +114,27 @@ PROTECTED_PATH_PATTERNS: List[str] = [
     "*.key",
     "id_rsa*",
     "id_ed25519*",
+    ".codescope.toml",
 ]
 
 # Replace and Regex Operations Settings (Part 4)
 MAX_FILES_PER_REPLACE: int = int(os.getenv("MAX_FILES_PER_REPLACE", "100"))
 REGEX_TIMEOUT_SECONDS: float = float(os.getenv("REGEX_TIMEOUT_SECONDS", "2.0"))
 MAX_REGEX_PATTERN_LENGTH: int = int(os.getenv("MAX_REGEX_PATTERN_LENGTH", "500"))
+
+# Git Integration Settings
+ENABLE_GIT_TOOLS: bool = _env_bool("ENABLE_GIT_TOOLS", False)
+GIT_CONFIRM_MODE: str = os.getenv("GIT_CONFIRM_MODE", "auto").strip().lower()
+if GIT_CONFIRM_MODE not in {"auto", "elicit", "code"}:
+    GIT_CONFIRM_MODE = "auto"
+GIT_CONFIRM_TTL_SECONDS: int = _env_int("GIT_CONFIRM_TTL_SECONDS", 300)
+GIT_COMMAND_TIMEOUT_SECONDS: int = _env_int("GIT_COMMAND_TIMEOUT_SECONDS", 30)
+GIT_MAX_DIFF_LINES: int = _env_int("GIT_MAX_DIFF_LINES", 2000)
+
+# Automated Verification Settings
+ENABLE_VERIFICATION_TOOLS: bool = _env_bool("ENABLE_VERIFICATION_TOOLS", False)
+VERIFY_CONFIG_FILENAME: str = os.getenv("VERIFY_CONFIG_FILENAME", ".codescope.toml")
+VERIFY_AUTODETECT: bool = _env_bool("VERIFY_AUTODETECT", True)
+VERIFY_DEFAULT_TIMEOUT_SECONDS: int = _env_int("VERIFY_DEFAULT_TIMEOUT_SECONDS", 300)
+VERIFY_MAX_OUTPUT_CHARS: int = _env_int("VERIFY_MAX_OUTPUT_CHARS", 20000)
 

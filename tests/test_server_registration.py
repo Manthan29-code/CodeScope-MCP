@@ -58,3 +58,62 @@ def test_server_registration_gate_on(monkeypatch):
     }
     assert names == expected_all_tools
 
+
+def test_server_registration_git_read_only(monkeypatch):
+    monkeypatch.setattr(config, "ENABLE_GIT_TOOLS", True)
+    monkeypatch.setattr(config, "ENABLE_WRITE_TOOLS", False)
+    import server
+    importlib.reload(server)
+
+    from fastmcp import Client
+
+    async def _get_tools():
+        async with Client(server.mcp) as client:
+            return await client.list_tools()
+
+    tools = asyncio.run(_get_tools())
+    names = {t.name for t in tools}
+
+    git_read_tools = {
+        "git_status",
+        "git_diff",
+        "git_log",
+        "git_show",
+        "git_branch_list",
+    }
+    assert git_read_tools.issubset(names)
+    assert "git_branch_create" not in names
+    assert "git_merge" not in names
+
+
+def test_server_registration_git_with_write(monkeypatch):
+    monkeypatch.setattr(config, "ENABLE_GIT_TOOLS", True)
+    monkeypatch.setattr(config, "ENABLE_WRITE_TOOLS", True)
+    monkeypatch.setattr(config, "WRITE_ALLOWED_ROOTS", ["/dummy/allowed"])
+    import server
+    importlib.reload(server)
+
+    from fastmcp import Client
+
+    async def _get_tools():
+        async with Client(server.mcp) as client:
+            return await client.list_tools()
+
+    tools = asyncio.run(_get_tools())
+    names = {t.name for t in tools}
+
+    all_git_tools = {
+        "git_status",
+        "git_diff",
+        "git_log",
+        "git_show",
+        "git_branch_list",
+        "git_branch_create",
+        "git_switch",
+        "git_merge",
+        "git_revert",
+        "git_restore",
+        "confirm_action",
+    }
+    assert all_git_tools.issubset(names)
+

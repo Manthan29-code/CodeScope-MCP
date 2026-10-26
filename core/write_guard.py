@@ -27,8 +27,8 @@ class RootNotAllowedError(WriteError):
     pass
 
 
-class ProtectedPathError(WriteError):
-    """Raised when target path matches protected files/directories (e.g. .git, .env, keys)."""
+class ProtectedPathError(WriteError, PermissionError):
+    """Raised when target path matches protected files/directories (e.g. .git, .env, keys, .codescope.toml)."""
     pass
 
 
@@ -118,6 +118,12 @@ def ensure_not_protected(root: Path, target: Path) -> None:
     except ValueError:
         # Fallback if relative_to fails
         rel_posix = os.path.relpath(str(target), str(root)).replace("\\", "/")
+
+    from core import safety
+    if safety.is_protected(rel_posix):
+        raise ProtectedPathError(
+            f"Access denied: path '{rel_posix}' is protected by safety rules."
+        )
 
     # Any .git directory component is always protected
     parts = rel_posix.split("/")

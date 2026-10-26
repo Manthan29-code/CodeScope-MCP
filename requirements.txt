@@ -5,4 +5,5 @@ python-dotenv>=1.0.0
 chardet>=5.0.0
 pytest>=8.0.0
 regex>=2024.0.0
+tomli>=2.0; python_version < "3.11"
 
