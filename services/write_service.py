@@ -15,11 +15,13 @@ def write_one(
     overwrite: bool = False,
     create_parents: bool = False,
     expected_hash: Optional[str] = None,
-    dry_run: bool = False
+    dry_run: bool = False,
+    verify: Optional[list[str]] = None
 ) -> WriteFileOutput:
     """
     Creates a new file or completely overwrites an existing file safely.
-    Follows write guard checks, style preservation, atomic writing, and audit logging.
+    Follows write guard checks, style preservation, atomic writing, audit logging,
+    and optional verification checks.
     """
     # 1. Begin write gate & root allowlist check
     root = write_guard.begin_write(project_path)
@@ -90,6 +92,14 @@ def write_one(
         f"overwritten={overwritten} bytes={len(new_bytes)} hash={new_hash}"
     )
 
+    verification_res = None
+    if verify:
+        import asyncio
+        from services.verification_service import VerificationService
+        verifier = VerificationService(root)
+        summary = asyncio.run(verifier.run_many(verify, stop_on_failure=True))
+        verification_res = summary.model_dump()
+
     return WriteFileOutput(
         file_path=rel_posix,
         created=created,
@@ -97,5 +107,6 @@ def write_one(
         bytes_written=len(new_bytes),
         new_hash=new_hash,
         diff=diff,
-        dry_run=False
+        dry_run=False,
+        verification=verification_res
     )

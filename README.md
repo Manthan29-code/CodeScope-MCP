@@ -147,6 +147,38 @@ Safely performs bulk search-and-replace across multiple files.
 - **Regex & Captures**: Supports regex back-references (e.g. `\1`) or literal string replacement.
 - **Protection**: Excludes binary files, protected paths, and mixed-line-ending files automatically.
 
+---
+
+### 🌿 Git Integration Tools (Opt-in via `ENABLE_GIT_TOOLS=true`)
+
+Provides safe Git version control operations directly over MCP:
+- **Read Tools (no approval needed)**:
+  - `git_status`: Inspect current branch, tracking branch, ahead/behind commits, and changed or untracked files.
+  - `git_diff`: View working tree or staged diffs, or diff against a base revision (with line capping).
+  - `git_log`: Review commit history (hash, author, date, message).
+  - `git_show`: Inspect full details and patch for any commit.
+  - `git_branch_list`: List local branches and identify the active branch.
+- **Low-Write Tools (requires `ENABLE_WRITE_TOOLS=true`)**:
+  - `git_branch_create`: Create a new branch (optionally checking it out).
+  - `git_switch`: Switch between branches (strictly blocked if tracked working tree has uncommitted modifications).
+- **Dangerous Gated Tools (requires human approval)**:
+  - `git_merge`: Merge a branch into the current branch (automatically aborts and rolls back cleanly on merge conflicts).
+  - `git_revert`: Revert a specific commit by creating an inverse commit.
+  - `git_restore`: Discard uncommitted modifications in specified files, resetting them to HEAD.
+  - **Recovery Protection**: Dangerous operations save an emergency recovery ref under `refs/codescope/backup/` prior to execution.
+  - **Confirmation Gate**: Layer 2 client elicitation (`ctx.elicit()`) or Layer 3 out-of-band console approval code via `confirm_action(action_id, approval_code)`.
+
+---
+
+### 🛡️ Automated Verification Tools (Opt-in via `ENABLE_VERIFICATION_TOOLS=true`)
+
+Enables AI agents to execute pre-approved lint, build, and test checks without permitting arbitrary shell command execution:
+- **`list_checks`**: Discover allowed verification checks defined in `.codescope.toml` or auto-detected from project files (`package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`).
+- **`run_check`**: Execute a single configured check by name (e.g. `lint`, `test`, or `build`). Returns pass/fail status, duration, and output tail.
+- **`run_all_checks`**: Execute multiple or all configured checks in sequence (supports `stop_on_failure=True`).
+- **Integrated Write Verification**: Write tools (`write_file`, `edit_file`) accept an optional `verify=["lint", "test"]` argument to run checks automatically after changes.
+- **Security**: The LLM can never provide shell strings or raw commands. Check definitions come strictly from `.codescope.toml` (which is protected against AI modification).
+
 
 ---
 

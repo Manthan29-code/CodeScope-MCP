@@ -202,3 +202,28 @@ def test_content_too_large_or_null_bytes(write_enabled, monkeypatch, tree_snapsh
     with pytest.raises(write_guard.BinaryFileError):
         write_service.write_one(str(root), "src/binary.py", "hello\x00world")
     assert tree_snapshot(root) == before
+
+
+def test_write_one_with_verify(write_enabled):
+    import sys
+    root = write_enabled
+    config_file = root / ".codescope.toml"
+    config_file.write_text(
+        f"""
+[checks.quick]
+cmd = ["{sys.executable.replace(chr(92), '/')}", "-c", "print('verified')"]
+""",
+        encoding="utf-8",
+    )
+
+    out = write_service.write_one(
+        str(root),
+        "src/verified_file.py",
+        "print('hello')\n",
+        verify=["quick"]
+    )
+    assert out.created is True
+    assert out.verification is not None
+    assert out.verification["passed"] is True
+    assert len(out.verification["results"]) == 1
+    assert out.verification["results"][0]["name"] == "quick"

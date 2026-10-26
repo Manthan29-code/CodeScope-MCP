@@ -17,7 +17,8 @@ def write_file(
     overwrite: bool = False,
     create_parents: bool = False,
     expected_hash: Optional[str] = None,
-    dry_run: bool = False
+    dry_run: bool = False,
+    verify: Optional[list[str]] = None
 ) -> WriteFileOutput:
     """
     Creates a new file or completely overwrites an existing file.
@@ -35,6 +36,7 @@ def write_file(
       - Set overwrite=True if the target file already exists and you want to replace it.
       - Prefer edit_file for partial updates to existing files.
       - Use dry_run=True to preview diffs before writing to disk.
+      - Pass verify=['lint', 'test'] to automatically run named verification checks after writing.
     
     Args:
         file_path: Relative path to target file from project_path (e.g. 'index.html' or 'css/base.css').
@@ -44,6 +46,7 @@ def write_file(
         create_parents: Always set to True when target file is inside subdirectories that may not exist yet.
         expected_hash: Optional SHA-256 hash from read_file for staleness check.
         dry_run: If True, previews changes with unified diff without modifying disk (default False).
+        verify: Optional list of check names (e.g. ['lint', 'test']) to execute after write.
     """
     return write_one(
         project_path=project_path,
@@ -52,5 +55,6 @@ def write_file(
         overwrite=overwrite,
         create_parents=create_parents,
         expected_hash=expected_hash,
-        dry_run=dry_run
+        dry_run=dry_run,
+        verify=verify
     )

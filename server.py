@@ -81,3 +81,18 @@ if config.ENABLE_GIT_TOOLS:
     register_git_tools(mcp, git_service, gate, enable_write_tools=config.ENABLE_WRITE_TOOLS)
     logger.info(f"Registered Git tools (write_enabled={config.ENABLE_WRITE_TOOLS}).")
 
+# Conditionally Register Automated Verification Tools
+if config.ENABLE_VERIFICATION_TOOLS:
+    from services.verification_service import VerificationService
+    from tools.verify_tools import register_verify_tools
+
+    verifier = VerificationService(
+        config.PROJECT_ROOT,
+        config_filename=config.VERIFY_CONFIG_FILENAME,
+        autodetect=config.VERIFY_AUTODETECT,
+        default_timeout=config.VERIFY_DEFAULT_TIMEOUT_SECONDS,
+        max_output_chars=config.VERIFY_MAX_OUTPUT_CHARS,
+    )
+    register_verify_tools(mcp, verifier)
+    logger.info("Registered Automated Verification tools: list_checks, run_check, run_all_checks.")
+

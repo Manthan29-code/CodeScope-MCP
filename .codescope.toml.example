@@ -1,0 +1,17 @@
+# {python} = the project's virtualenv interpreter (.venv/venv/env), else the interpreter running CodeScope.
+# Always give "cmd" as a list. Shell strings are rejected.
+
+[checks.lint]
+description = "Ruff lint"
+cmd = ["{python}", "-m", "ruff", "check", "."]
+timeout = 120
+
+[checks.test]
+description = "pytest"
+cmd = ["{python}", "-m", "pytest", "-q"]
+timeout = 300
+
+# [checks.build]
+# cmd = ["npm", "run", "build"]
+# cwd = "frontend"
+# timeout = 600

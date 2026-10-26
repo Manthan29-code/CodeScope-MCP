@@ -15,7 +15,8 @@ def edit_file(
     edits: List[EditOperation],
     project_path: str = ".",
     expected_hash: Optional[str] = None,
-    dry_run: bool = False
+    dry_run: bool = False,
+    verify: Optional[List[str]] = None
 ) -> EditFileOutput:
     """
     Applies exact-match string replacement edits sequentially to an existing text file.
@@ -28,6 +29,7 @@ def edit_file(
       - Edits apply sequentially in the given order; each edit operates on the output of the preceding edit.
       - Pass expected_hash from read_file to ensure the file has not been modified since it was read.
       - Use dry_run=True to preview the resulting unified diff without making changes to disk.
+      - Pass verify=['lint', 'test'] to automatically run named verification checks after edits are applied.
     
     Args:
         file_path: Relative path to target file from project root.
@@ -35,11 +37,13 @@ def edit_file(
         project_path: Absolute or relative path to project root (default ".").
         expected_hash: Optional SHA-256 hash from read_file for staleness check.
         dry_run: If True, returns the unified diff preview without modifying disk (default False).
+        verify: Optional list of check names (e.g. ['lint', 'test']) to execute after editing.
     """
     return edit_one(
         project_path=project_path,
         file_path=file_path,
         edits=edits,
         expected_hash=expected_hash,
-        dry_run=dry_run
+        dry_run=dry_run,
+        verify=verify
     )

@@ -18,11 +18,13 @@ def edit_one(
     file_path: str,
     edits: List[EditOperation],
     expected_hash: Optional[str] = None,
-    dry_run: bool = False
+    dry_run: bool = False,
+    verify: Optional[List[str]] = None
 ) -> EditFileOutput:
     """
     Applies exact-match string replacement edits sequentially to an existing text file.
-    Preserves original file style (newlines, encoding, BOM, trailing newline).
+    Preserves original file style (newlines, encoding, BOM, trailing newline) and runs
+    optional verification checks after edit.
     """
     # 1. Pipeline guards
     root = write_guard.begin_write(project_path)
@@ -125,11 +127,20 @@ def edit_one(
         f"replacements={total_replacements} hash={new_hash}"
     )
 
+    verification_res = None
+    if verify:
+        import asyncio
+        from services.verification_service import VerificationService
+        verifier = VerificationService(root)
+        summary = asyncio.run(verifier.run_many(verify, stop_on_failure=True))
+        verification_res = summary.model_dump()
+
     return EditFileOutput(
         file_path=rel_posix,
         edits_applied=edits_applied,
         replacements_made=total_replacements,
         diff=diff,
         new_hash=new_hash,
-        dry_run=False
+        dry_run=False,
+        verification=verification_res
     )

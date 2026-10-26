@@ -14,6 +14,8 @@ This guide provides an in-depth reference for every configuration variable in **
   - [3. Read & Exploration Limits](#3-read--exploration-limits)
   - [4. Write Operations & Safety Controls](#4-write-operations--safety-controls)
   - [5. Search & Regex Engine Controls](#5-search--regex-engine-controls)
+  - [6. Git Integration Controls](#6-git-integration-controls)
+  - [7. Automated Verification Controls](#7-automated-verification-controls)
 - [Project Sizing Matrix (Quick Comparison)](#project-sizing-matrix-quick-comparison)
 - [Ready-to-Use Configuration Presets](#ready-to-use-configuration-presets)
   - [Preset A: Small Projects & Microservices](#preset-a-small-projects--microservices)
@@ -209,6 +211,71 @@ CodeScope MCP enforces strict boundary validation on all read and write tools to
 - **Recommended Values:**
   - **Small / Medium Project:** `500` – Ample for complex regexes.
   - **Large Monorepo / Machine-Generated Queries:** `1000` – Needed if agents build large alternation patterns (e.g., `(patternA|patternB|...|patternZ)`).
+
+---
+
+### 6. Git Integration Controls
+
+#### `ENABLE_GIT_TOOLS`
+- **Default:** `false`
+- **Type:** Boolean (`true` / `false`)
+- **Purpose:** Enables Git inspection and manipulation tools. When `false`, no Git tools are registered.
+- **Tools Enabled:**
+  - Read: `git_status`, `git_diff`, `git_log`, `git_show`, `git_branch_list`
+  - Write (if `ENABLE_WRITE_TOOLS=true`): `git_branch_create`, `git_switch`, `git_merge`, `git_revert`, `git_restore`, `confirm_action`
+
+#### `GIT_CONFIRM_MODE`
+- **Default:** `auto`
+- **Type:** String (`auto` | `elicit` | `code`)
+- **Purpose:** Mechanism for authorizing dangerous actions (`git_merge`, `git_revert`, `git_restore`).
+  - `auto`: Attempts client-side UI elicitation (`ctx.elicit()`) if supported; falls back to console approval code.
+  - `elicit`: Requires client UI elicitation (fails if unsupported by client).
+  - `code`: Prints a 6-digit one-time code to server console (stderr) only. The user reads and provides it to the model.
+
+#### `GIT_CONFIRM_TTL_SECONDS`
+- **Default:** `300` (5 minutes)
+- **Type:** Integer (Seconds)
+- **Purpose:** Expiration time for pending approval actions.
+
+#### `GIT_COMMAND_TIMEOUT_SECONDS`
+- **Default:** `30`
+- **Type:** Integer (Seconds)
+- **Purpose:** Subprocess execution timeout for Git commands.
+
+#### `GIT_MAX_DIFF_LINES`
+- **Default:** `2000`
+- **Type:** Integer
+- **Purpose:** Maximum lines returned for `git_diff` and `git_show`.
+
+---
+
+### 7. Automated Verification Controls
+
+#### `ENABLE_VERIFICATION_TOOLS`
+- **Default:** `false`
+- **Type:** Boolean (`true` / `false`)
+- **Purpose:** Enables verification tools (`list_checks`, `run_check`, `run_all_checks`).
+- **Security:** Arbitrary shell commands are strictly disallowed. Only predefined checks in `.codescope.toml` or safe auto-detected project commands can run.
+
+#### `VERIFY_CONFIG_FILENAME`
+- **Default:** `.codescope.toml`
+- **Type:** String
+- **Purpose:** Configuration filename in project root defining authorized checks. This file is protected against model modification.
+
+#### `VERIFY_AUTODETECT`
+- **Default:** `true`
+- **Type:** Boolean (`true` / `false`)
+- **Purpose:** When `.codescope.toml` is absent, automatically discovers lint/test/build tasks from `pyproject.toml`, `package.json`, `Cargo.toml`, or `go.mod`.
+
+#### `VERIFY_DEFAULT_TIMEOUT_SECONDS`
+- **Default:** `300` (5 minutes)
+- **Type:** Integer (Seconds)
+- **Purpose:** Timeout per verification check.
+
+#### `VERIFY_MAX_OUTPUT_CHARS`
+- **Default:** `20000`
+- **Type:** Integer (Characters)
+- **Purpose:** Maximum stdout/stderr characters retained per check stream (preserves head and tail).
 
 ---
 

@@ -117,3 +117,21 @@ def test_server_registration_git_with_write(monkeypatch):
     }
     assert all_git_tools.issubset(names)
 
+
+def test_server_registration_verification_tools(monkeypatch):
+    monkeypatch.setattr(config, "ENABLE_VERIFICATION_TOOLS", True)
+    import server
+    importlib.reload(server)
+
+    from fastmcp import Client
+
+    async def _get_tools():
+        async with Client(server.mcp) as client:
+            return await client.list_tools()
+
+    tools = asyncio.run(_get_tools())
+    names = {t.name for t in tools}
+
+    verify_tools = {"list_checks", "run_check", "run_all_checks"}
+    assert verify_tools.issubset(names)
+

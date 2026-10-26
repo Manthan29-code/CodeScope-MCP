@@ -48,7 +48,35 @@ Write tools are registered only when `ENABLE_WRITE_TOOLS` is enabled.
 | `copy_file` | Copy one file | Source, destination, project path | Copy status |
 | `replace_in_files` | Replace literal text or regex matches in multiple files | Find/replace text, file pattern, filters, regex/case options, dry-run | Per-file diffs and partial/error status |
 
-Input and output contracts are defined in `models/schemas.py`. Tool adapters live under `tools/` and delegate to services.
+### Git Tools
+
+Git tools are registered when `ENABLE_GIT_TOOLS=true`. Low-write and dangerous tools also require `ENABLE_WRITE_TOOLS=true`.
+
+| Tool | Risk Tier | Purpose | Inputs | Approval Required |
+| --- | --- | --- | --- | --- |
+| `git_status` | READ | Show working tree branch, tracking info, ahead/behind, changes | None | No |
+| `git_diff` | READ | View diff of working tree or staged changes | Path, staged, base, max_lines | No |
+| `git_log` | READ | View commit history | Limit, path, rev | No |
+| `git_show` | READ | View commit details and patch | Rev, max_lines | No |
+| `git_branch_list` | READ | List local branches | None | No |
+| `git_branch_create` | LOW_WRITE | Create branch (optionally checkout) | Name, start_point, checkout | No |
+| `git_switch` | LOW_WRITE | Switch to branch (requires clean tracked tree) | Branch | No |
+| `git_merge` | DANGEROUS | Merge branch into current (auto-abort on conflict) | Branch | Yes (preview + elicit/code) |
+| `git_revert` | DANGEROUS | Revert a commit (creates undo commit) | Commit SHA | Yes (preview + elicit/code) |
+| `git_restore` | DANGEROUS | Discard uncommitted changes in paths (backup ref created) | Paths | Yes (preview + elicit/code) |
+| `confirm_action` | DANGEROUS | Execute previewed action with console approval code | action_id, approval_code | Yes |
+
+### Automated Verification Tools
+
+Verification tools are registered when `ENABLE_VERIFICATION_TOOLS=true`. The model can only execute named checks, never arbitrary shell commands.
+
+| Tool | Risk Tier | Purpose | Inputs |
+| --- | --- | --- | --- |
+| `list_checks` | READ | List authorized checks from `.codescope.toml` or auto-detected | None |
+| `run_check` | EXECUTE | Execute a single named check | Name |
+| `run_all_checks` | EXECUTE | Execute multiple or all checks | Names, stop_on_failure |
+
+Input and output contracts are defined in `models/schemas.py`, `models/git_models.py`, and `models/verify_models.py`. Tool adapters live under `tools/` and delegate to services.
 
 ## 2. Layer Architecture
 

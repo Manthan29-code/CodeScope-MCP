@@ -106,7 +106,7 @@ class WriteFileInput(BaseModel):
     create_parents: bool = Field(False, description="Set to True to automatically create missing parent directories (e.g. css/, js/modules/)")
     expected_hash: Optional[str] = Field(None, description="Expected SHA-256 hash of existing file for staleness check")
     dry_run: bool = Field(False, description="If True, preview changes with diff without writing to disk")
-
+    verify: Optional[List[str]] = Field(None, description="Optional list of named verification checks to run after write")
 
 
 class WriteFileOutput(BaseModel):
@@ -117,6 +117,7 @@ class WriteFileOutput(BaseModel):
     new_hash: str = Field(..., description="SHA-256 hex digest of the new file content")
     diff: Optional[str] = Field(None, description="Unified diff preview (for overwrites)")
     dry_run: bool = Field(False, description="True if operation was dry-run preview only")
+    verification: Optional[dict] = Field(None, description="Verification summary if verify checks were run")
 
 
 class EditOperation(BaseModel):
@@ -131,6 +132,7 @@ class EditFileInput(BaseModel):
     edits: List[EditOperation] = Field(..., min_length=1, max_length=50, description="List of 1-50 edit operations to apply sequentially")
     expected_hash: Optional[str] = Field(None, description="Expected SHA-256 hash of existing file for staleness check")
     dry_run: bool = Field(False, description="If True, preview changes with diff without writing to disk")
+    verify: Optional[List[str]] = Field(None, description="Optional list of named verification checks to run after edit")
 
 
 class EditFileOutput(BaseModel):
@@ -140,6 +142,7 @@ class EditFileOutput(BaseModel):
     diff: str = Field(..., description="Unified diff of the changes")
     new_hash: str = Field(..., description="SHA-256 hex digest of the file after edits")
     dry_run: bool = Field(False, description="True if operation was dry-run preview only")
+    verification: Optional[dict] = Field(None, description="Verification summary if verify checks were run")
 
 
 # ==========================================
