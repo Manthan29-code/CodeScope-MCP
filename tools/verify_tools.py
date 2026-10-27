@@ -14,17 +14,9 @@ from utils.process_runner import ExecutableNotFound
 READ_ONLY = {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
 EXECUTE = {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
 
-_HANDLED = (VerificationError, ValueError, PermissionError, ReadRootNotAllowedError, ExecutableNotFound)
+from utils.error_handler import handle_tool_errors
 
-
-def _guard(fn):
-    @functools.wraps(fn)
-    async def wrapper(*args, **kwargs):
-        try:
-            return await fn(*args, **kwargs)
-        except _HANDLED as exc:
-            return {"ok": False, "error": str(exc)}
-    return wrapper
+_guard = handle_tool_errors()
 
 
 def _get_verification_service(

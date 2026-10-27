@@ -21,29 +21,9 @@ READ_ONLY = {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": T
 LOW_WRITE = {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
 DESTRUCTIVE = {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": False}
 
-_HANDLED = (
-    GitError,
-    ValueError,
-    PermissionError,
-    ProtectedPathError,
-    ApprovalError,
-    ExecutableNotFound,
-    WriteError,
-    ReadRootNotAllowedError,
-    RootNotAllowedError,
-    WriteDisabledError,
-)
+from utils.error_handler import handle_tool_errors
 
-
-def _guard(fn):
-    """Turn expected errors into a clean {"ok": False, "error": ...} result."""
-    @functools.wraps(fn)
-    async def wrapper(*args, **kwargs):
-        try:
-            return await fn(*args, **kwargs)
-        except _HANDLED as exc:
-            return {"ok": False, "error": str(exc)}
-    return wrapper
+_guard = handle_tool_errors()
 
 
 def _get_git_service(
@@ -169,6 +149,13 @@ def register_git_tools(mcp: FastMCP, git: GitService, gate: ApprovalGate, *, ena
 
     @mcp.tool(annotations=LOW_WRITE)
     @_guard
+    async def git_create_branch(name: str, start_point: Optional[str] = None, checkout: bool = False,
+                              project_path: str = ".") -> dict:
+        """Alias for git_branch_create. Create a local branch (optionally switching to it) in target repository."""
+        return await git_branch_create(name=name, start_point=start_point, checkout=checkout, project_path=project_path)
+
+    @mcp.tool(annotations=LOW_WRITE)
+    @_guard
     async def git_switch(branch: str, project_path: str = ".") -> dict:
         """Switch to an existing local branch in target repository. Refuses if tracked files have uncommitted changes.
         
@@ -179,6 +166,12 @@ def register_git_tools(mcp: FastMCP, git: GitService, gate: ApprovalGate, *, ena
         git_target = _get_git_service(project_path, for_write=True, default_git=git)
         await git_target.ensure_repo()
         return {"ok": True, **(await git_target.switch(branch)).model_dump()}
+
+    @mcp.tool(annotations=LOW_WRITE)
+    @_guard
+    async def git_checkout(branch: str, project_path: str = ".") -> dict:
+        """Alias for git_switch. Switch to an existing local branch in target repository."""
+        return await git_switch(branch=branch, project_path=project_path)
 
     # ------------------------------------------------------------ DANGEROUS (approval required)
     async def _run_gated(ctx: Optional[Context], git_target: GitService, prepared) -> dict:

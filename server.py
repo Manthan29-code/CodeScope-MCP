@@ -9,10 +9,22 @@ from tools.search_files_tool import search_files
 
 SERVER_INSTRUCTIONS = """
 CodeScope MCP Server Guidelines:
+- Available Git Tools:
+  * git_branch_create(name, start_point=None, checkout=False, project_path): Create a new Git branch.
+  * git_switch(branch, project_path): Switch to an existing local branch.
+  * git_status(project_path): View repository status, staged/unstaged changes, and untracked files.
+  * git_diff(path=None, staged=False, base=None, max_lines=500, project_path): View unified diff.
+  * git_log(limit=20, path=None, rev=None, project_path): View recent commits.
+  * git_show(rev='HEAD', max_lines=500, project_path): View specific commit details and patch.
+  * git_branch_list(project_path): List local Git branches.
+  * git_merge, git_revert, git_restore: Gated destructive Git actions requiring human approval code.
+  * confirm_action(action_id, approval_code): Execute a previewed dangerous action with the 6-digit code.
+- Available Verification Tools:
+  * list_checks, run_check, run_all_checks: Run configured or auto-detected test/lint/build checks.
+- Project Path: When working on a specific project or sandbox directory (e.g., 'C:\\MyProject\\codescope-sandbox'), always pass that directory path as the project_path argument to read tools, write tools, git tools, and verification tools.
+- File Paths: All file paths must be relative to project_path (e.g., 'src/App.jsx', 'css/style.css', 'index.html').
 - Code Formatting & Indentation: When writing or editing code files (HTML, CSS, JavaScript, TypeScript, React/JSX/TSX, Python, Java, C/C++, Go, Rust, JSON, YAML, etc.), ALWAYS output clean, beautifully formatted, multi-line source code with standard indentation (2 spaces for HTML/CSS/JS/TS/React/JSON/YAML, 4 spaces for Python/Java/C/C++).
 - No Minification: NEVER compress or collapse entire files, functions, HTML tags, or CSS rules into a single line unless specifically requested (e.g. a .min.js or .min.css file).
-- File Paths: All file paths must be relative to project_path (e.g., 'src/App.jsx', 'css/style.css', 'index.html').
-- Project Path: When working on a specific project or sandbox directory (e.g., 'C:\\MyProject\\codescope-sandbox'), always pass that directory path as the project_path argument to read tools, write tools, git tools, and verification tools.
 - Directory Creation: Always set create_parents=True when writing files located in subdirectories so parent folders are automatically created.
 """
 
