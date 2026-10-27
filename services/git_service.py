@@ -318,6 +318,9 @@ class GitService:
         if not paths or len(paths) > 100:
             raise ValueError("Provide between 1 and 100 paths")
         rels = [to_repo_relative(self.root, p) for p in paths]
+        from core import safety
+        for rel in rels:
+            safety.assert_not_protected(rel)
         if self.block_ignored:
             for rel in rels:
                 if rel != "." and await self._is_ignored(rel):

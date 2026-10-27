@@ -184,6 +184,8 @@ def test_server_registration_all_enabled(monkeypatch):
         "git_log",
         "git_show",
         "git_branch_list",
+        "git_list_branches",
+        "git_branches",
         "git_branch_create",
         "git_create_branch",
         "git_switch",

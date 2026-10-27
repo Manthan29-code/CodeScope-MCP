@@ -23,6 +23,24 @@ def read_one(
     try:
         root_path = resolve_and_verify(project_path, "")
         target_path = resolve_and_verify(project_path, file_path)
+        try:
+            rel_posix = target_path.relative_to(root_path).as_posix()
+        except ValueError:
+            rel_posix = rel_clean
+
+        from core import safety
+        if safety.is_protected(rel_posix):
+            return ReadFileOutput(
+                file_path=rel_clean,
+                content="",
+                start_line=0,
+                end_line=0,
+                total_lines=0,
+                truncated=False,
+                is_binary=False,
+                content_hash=None,
+                error=f"Access denied: '{rel_clean}' is protected by safety rules (.env, .git, keys) and cannot be read."
+            )
     except Exception as e:
         return ReadFileOutput(
             file_path=rel_clean,

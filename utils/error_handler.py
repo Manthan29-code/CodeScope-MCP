@@ -27,6 +27,25 @@ def format_tool_error(exc: Exception, tool_name: str = "") -> Dict[str, Any]:
     elif "not inside a git repository" in msg.lower() or "not a git repository" in msg.lower():
         error_type = "GitNotRepositoryError"
         hint = "The target directory is not an initialized Git repository. Initialize git in that folder or verify that project_path points to the repository root."
+    elif "uncommitted changes" in msg.lower() or "clean_tracked" in msg.lower():
+        error_type = "DirtyWorkingTreeError"
+        hint = (
+            "The repository has uncommitted changes to tracked files. "
+            "To switch branches or merge safely, either commit the changes, run git_restore "
+            "to discard the uncommitted changes, or run git_status() to inspect them."
+        )
+    elif "conflict" in msg.lower() or "merge failed" in msg.lower():
+        error_type = "MergeConflictError"
+        hint = "The merge resulted in conflicts and was automatically aborted. The repository remains clean and unchanged."
+    elif "already exists" in msg.lower():
+        error_type = "BranchAlreadyExistsError"
+        hint = "A branch with that name already exists. Choose a different name or switch to it using git_switch()."
+    elif "unknown or expired action_id" in msg.lower():
+        error_type = "ExpiredApprovalError"
+        hint = "The approval request has expired or action_id is invalid. Re-request the dangerous action to receive a fresh approval code."
+    elif "invalid approval code" in msg.lower():
+        error_type = "InvalidApprovalCodeError"
+        hint = "The 6-digit approval code was incorrect. Obtain the exact code displayed on the server console."
     elif "project_path is required" in msg.lower():
         error_type = "MissingArgumentError"
         hint = "Always pass an explicit absolute or relative project_path (e.g. 'C:/MyProject/codescope-sandbox'). Never run tools without specifying project_path."
@@ -54,6 +73,40 @@ def format_tool_error(exc: Exception, tool_name: str = "") -> Dict[str, Any]:
     }
 
 
+_EXPECTED_ERROR_NAMES = {
+    "GitError",
+    "ApprovalError",
+    "VerificationError",
+    "ValueError",
+    "PermissionError",
+    "ReadRootNotAllowedError",
+    "RootNotAllowedError",
+    "WriteDisabledError",
+    "ProtectedPathError",
+    "IgnoredPathError",
+    "FileNotFoundError",
+    "ExecutableNotFound",
+}
+
+
+def _log_tool_exception(name: str, exc: Exception, kwargs: dict) -> None:
+    exc_type = type(exc).__name__
+    is_expected = exc_type in _EXPECTED_ERROR_NAMES or isinstance(
+        exc, (ValueError, PermissionError, FileNotFoundError)
+    )
+    # Sanitize arguments: truncate long strings or remove sensitive keys if any
+    safe_kwargs = {k: (str(v)[:100] + "..." if isinstance(v, str) and len(v) > 100 else v) for k, v in kwargs.items()}
+
+    if is_expected:
+        logger.warning(f"Tool '{name}' rejected request: [{exc_type}] {exc} (Args: {safe_kwargs})")
+    else:
+        logger.error(
+            f"Tool '{name}' unexpected failure: [{exc_type}] {exc}\n"
+            f"  Arguments: {safe_kwargs}\n"
+            f"  Traceback:\n{traceback.format_exc()}"
+        )
+
+
 def handle_tool_errors(tool_name: Optional[str] = None):
     """
     Decorator for MCP tools providing centralized logging to server console
@@ -67,11 +120,7 @@ def handle_tool_errors(tool_name: Optional[str] = None):
             try:
                 return await fn(*args, **kwargs)
             except Exception as exc:
-                logger.error(
-                    f"Tool '{name}' failed: [{type(exc).__name__}] {exc}\n"
-                    f"  Arguments: {kwargs}\n"
-                    f"  Traceback:\n{traceback.format_exc()}"
-                )
+                _log_tool_exception(name, exc, kwargs)
                 return format_tool_error(exc, name)
 
         @functools.wraps(fn)
@@ -79,11 +128,7 @@ def handle_tool_errors(tool_name: Optional[str] = None):
             try:
                 return fn(*args, **kwargs)
             except Exception as exc:
-                logger.error(
-                    f"Tool '{name}' failed: [{type(exc).__name__}] {exc}\n"
-                    f"  Arguments: {kwargs}\n"
-                    f"  Traceback:\n{traceback.format_exc()}"
-                )
+                _log_tool_exception(name, exc, kwargs)
                 return format_tool_error(exc, name)
 
         return async_wrapper if inspect.iscoroutinefunction(fn) else sync_wrapper

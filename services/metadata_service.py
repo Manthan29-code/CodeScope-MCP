@@ -21,6 +21,9 @@ def get_metadata(project_path: str, file_path: str) -> FileMetadataOutput:
     tokens = estimate_file_tokens(target_path, size_bytes)
 
     rel_path_str = str(target_path.relative_to(resolve_and_verify(project_path, ""))).replace("\\", "/")
+    from core import safety
+    if safety.is_protected(rel_path_str):
+        raise PermissionError(f"Access denied: '{file_path}' is protected by safety rules (.env, .git, keys).")
 
     return FileMetadataOutput(
         file_path=rel_path_str,

@@ -127,6 +127,18 @@ def register_git_tools(mcp: FastMCP, git: GitService, gate: ApprovalGate, *, ena
         await git_target.ensure_repo()
         return {"ok": True, "branches": [b.model_dump() for b in await git_target.branches()]}
 
+    @mcp.tool(annotations=READ_ONLY)
+    @_guard
+    async def git_list_branches(project_path: str = ".") -> dict:
+        """Alias for git_branch_list. List local branches in target repository."""
+        return await git_branch_list(project_path=project_path)
+
+    @mcp.tool(annotations=READ_ONLY)
+    @_guard
+    async def git_branches(project_path: str = ".") -> dict:
+        """Alias for git_branch_list. List local branches in target repository."""
+        return await git_branch_list(project_path=project_path)
+
     if not enable_write_tools:
         return
 

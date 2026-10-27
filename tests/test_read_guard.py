@@ -97,3 +97,26 @@ def test_search_files_tool_integration_blocked(project, tmp_path_factory, monkey
 
     with pytest.raises(path_security.ReadRootNotAllowedError):
         search_files("query", project_path=str(outside))
+
+
+def test_read_file_protected_path_blocked(project, monkeypatch):
+    monkeypatch.setattr(config, "READ_ALLOWED_ROOTS", [str(project)])
+    (project / ".env").write_text("SECRET=super_secret\n", encoding="utf-8")
+    (project / ".env.production").write_text("SECRET=prod_secret\n", encoding="utf-8")
+
+    # .env is blocked
+    res_env = read_file(".env", project_path=str(project))
+    assert res_env.error is not None
+    assert "Access denied" in res_env.error
+    assert res_env.content == ""
+
+    # .env.production is blocked
+    res_prod = read_file(".env.production", project_path=str(project))
+    assert res_prod.error is not None
+    assert "Access denied" in res_prod.error
+
+    # .env.example is NOT blocked
+    (project / ".env.example").write_text("SECRET=\n", encoding="utf-8")
+    res_example = read_file(".env.example", project_path=str(project))
+    assert res_example.error is None
+    assert res_example.content == "SECRET=\n"

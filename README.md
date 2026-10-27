@@ -157,10 +157,10 @@ Provides safe Git version control operations directly over MCP:
   - `git_diff`: View working tree or staged diffs, or diff against a base revision (with line capping).
   - `git_log`: Review commit history (hash, author, date, message).
   - `git_show`: Inspect full details and patch for any commit.
-  - `git_branch_list`: List local branches and identify the active branch.
+  - `git_branch_list` (aliases: `git_list_branches`, `git_branches`): List local branches and identify the active branch.
 - **Low-Write Tools (requires `ENABLE_WRITE_TOOLS=true`)**:
-  - `git_branch_create`: Create a new branch (optionally checking it out).
-  - `git_switch`: Switch between branches (strictly blocked if tracked working tree has uncommitted modifications).
+  - `git_branch_create` (alias: `git_create_branch`): Create a new branch (optionally checking it out).
+  - `git_switch` (alias: `git_checkout`): Switch between branches (strictly blocked if tracked working tree has uncommitted modifications).
 - **Dangerous Gated Tools (requires human approval)**:
   - `git_merge`: Merge a branch into the current branch (automatically aborts and rolls back cleanly on merge conflicts).
   - `git_revert`: Revert a specific commit by creating an inverse commit.
@@ -422,9 +422,33 @@ python main.py
 ```
 
 By default, the server runs on `http://127.0.0.1:8000` with the MCP endpoint accessible at:
-```
+```text
 http://127.0.0.1:8000/mcp
 ```
+
+### 🌐 Connecting to Cloud Chat LLMs (Claude, ChatGPT, Gemini)
+
+To connect remote cloud chat applications to CodeScope running on your local machine, expose port 8000 using an ngrok tunnel:
+
+```bash
+ngrok http 8000
+```
+
+Copy your public forwarding HTTPS address and append `/mcp` (e.g. `https://<subdomain>.ngrok-free.app/mcp`).
+
+> [!TIP]
+> 📖 **Step-by-step connection walkthroughs**:
+> For complete setup steps, screenshots, and configuration for **Claude.ai**, **ChatGPT**, and **Google Gemini**, see [**REMOTE_CONNECTORS_GUIDE.md**](REMOTE_CONNECTORS_GUIDE.md).
+
+> [!WARNING]
+> ### 🔄 Important: Refreshing Cached Tool Schemas in Claude.ai & ChatGPT
+> If you update server code or toggle Git/Verification tools in `.env`, be aware of how different chat clients cache MCP schemas:
+> - **Google Gemini**: Automatically re-queries the `/mcp` endpoint dynamically on new sessions.
+> - **Claude.ai & ChatGPT**: Save a static snapshot of discovered tools **inside your Account Connector settings** when you first add the connector. Simply clicking *"New Chat"* will not refresh the tool list.
+> - **If an AI reports that a tool is missing or unavailable**:
+>   1. **Restart `python main.py`** in your local terminal so the server loads the latest code.
+>   2. In **Claude.ai** (Settings → Connectors) or **ChatGPT** (Settings → Apps), click **Sync / Refresh** (or remove and re-add the connector).
+>   3. Start a **New Chat** so the chat session picks up the refreshed tool list.
 
 ---
 
