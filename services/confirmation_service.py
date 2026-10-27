@@ -24,6 +24,7 @@ class PendingAction:
     code: str
     expires_at: float
     attempts_left: int = 3
+    project_path: str = "."
 
 
 class ConfirmationService:
@@ -42,7 +43,8 @@ class ConfirmationService:
         for key in [k for k, v in self._pending.items() if v.expires_at <= now]:
             del self._pending[key]
 
-    def create(self, tool: str, args: Dict[str, Any], summary: str, fingerprint: str) -> PendingAction:
+    def create(self, tool: str, args: Dict[str, Any], summary: str, fingerprint: str,
+               project_path: str = ".") -> PendingAction:
         with self._lock:
             now = time.monotonic()
             self._purge(now)
@@ -51,7 +53,7 @@ class ConfirmationService:
             action = PendingAction(
                 action_id=secrets.token_urlsafe(8), tool=tool, args=args, summary=summary,
                 fingerprint=fingerprint, code=f"{secrets.randbelow(1_000_000):06d}",
-                expires_at=now + self._ttl,
+                expires_at=now + self._ttl, project_path=project_path,
             )
             self._pending[action.action_id] = action
         # OUT-OF-BAND: the code goes to the server console only.
@@ -103,7 +105,7 @@ class ApprovalGate:
         self.mode = mode if mode in {"auto", "elicit", "code"} else "auto"
 
     async def gate(self, ctx, *, tool: str, args: Dict[str, Any], summary: str,
-                   preview: str, fingerprint: str) -> GateOutcome:
+                   preview: str, fingerprint: str, project_path: str = ".") -> GateOutcome:
         # Layer 2: ask the human directly through the client, if it supports elicitation.
         # (API shape follows FastMCP 2.x; verify against your installed version.)
         if self.mode in ("auto", "elicit") and ctx is not None:
@@ -125,7 +127,7 @@ class ApprovalGate:
                 return GateOutcome("denied", {"ok": False, "error": "The user declined this action."})
 
         # Layer 3: approval code shown only on the server console.
-        action = self.service.create(tool, args, summary, fingerprint)
+        action = self.service.create(tool, args, summary, fingerprint, project_path=project_path)
         return GateOutcome("pending", {
             "ok": True,
             "status": "approval_required",
