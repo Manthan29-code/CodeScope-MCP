@@ -195,3 +195,59 @@ def test_restore_flow_and_ignored(repo):
     (repo / "ignored.txt").write_text("ignored content\n", encoding="utf-8")
     with pytest.raises(PermissionError, match="is ignored"):
         asyncio.run(svc.prepare_restore(["ignored.txt"]))
+
+
+def test_commit_flow(repo):
+    svc = GitService(repo)
+    (repo / "a.txt").write_text("modified a\n", encoding="utf-8")
+    (repo / "new.txt").write_text("new content\n", encoding="utf-8")
+
+    # Empty message should fail
+    with pytest.raises(ValueError, match="Commit message"):
+        asyncio.run(svc.prepare_commit(""))
+
+    # Prepare commit
+    prepared = asyncio.run(svc.prepare_commit("feat: update a and add new file"))
+    assert prepared.tool == "git_commit"
+    assert "update a" in prepared.summary
+    assert "HUMAN-IN-THE-LOOP" in prepared.preview
+
+    # Execute commit
+    res = asyncio.run(svc.execute("git_commit", prepared.args))
+    assert "Committed" in res.message
+
+    status = asyncio.run(svc.status())
+    assert status.is_clean
+
+
+def test_commit_protected_path_refused(repo):
+    svc = GitService(repo)
+    (repo / ".env").write_text("SECRET=123\n", encoding="utf-8")
+    from core.safety import ProtectedPathError
+    with pytest.raises(ProtectedPathError):
+        asyncio.run(svc.prepare_commit("commit secret", paths=[".env"]))
+
+
+def test_push_flow(repo, tmp_path):
+    svc = GitService(repo)
+    remote_bare = tmp_path / "remote.git"
+    subprocess.run(["git", "init", "--bare", str(remote_bare)], check=True)
+    subprocess.run(["git", "remote", "add", "origin", str(remote_bare)], cwd=repo, check=True)
+
+    branch = asyncio.run(svc.current_branch())
+
+    # Prepare push
+    prepared = asyncio.run(svc.prepare_push("origin", branch=branch, set_upstream=True))
+    assert prepared.tool == "git_push"
+    assert "origin" in prepared.summary
+    assert "REMOTE PUSH" in prepared.preview
+
+    # Execute push
+    res = asyncio.run(svc.execute("git_push", prepared.args))
+    assert "Pushed branch" in res.message
+
+    # Verify remote received commits
+    clone_dir = tmp_path / "clone_verify"
+    subprocess.run(["git", "clone", str(remote_bare), str(clone_dir)], check=True)
+    assert (clone_dir / "a.txt").exists()
+

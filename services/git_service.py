@@ -280,6 +280,10 @@ class GitService:
             return await self.prepare_revert(args["commit"])
         if tool == "git_restore":
             return await self.prepare_restore(args["paths"])
+        if tool == "git_commit":
+            return await self.prepare_commit(args["message"], args.get("paths"))
+        if tool == "git_push":
+            return await self.prepare_push(args.get("remote", "origin"), args.get("branch"), args.get("set_upstream", False))
         raise GitError(f"Unknown action: {tool}")
 
     async def prepare_merge(self, branch: str) -> Prepared:
@@ -337,9 +341,117 @@ class GitService:
                         summary=f"git_restore: discard uncommitted changes in {len(rels)} path(s)",
                         preview=preview, fingerprint=await self.fingerprint(extra=digest + "|".join(rels)))
 
+    async def prepare_commit(self, message: str, paths: Optional[Sequence[str]] = None) -> Prepared:
+        if not isinstance(message, str) or not message.strip():
+            raise ValueError("Commit message must be a non-empty string")
+        message = message.strip()
+        from core import safety
+
+        rels: Optional[List[str]] = None
+        if paths is not None:
+            if not paths:
+                raise ValueError("Paths list cannot be empty when provided")
+            if len(paths) > 200:
+                raise ValueError("Too many paths (max 200)")
+            rels = [to_repo_relative(self.root, p) for p in paths]
+            for rel in rels:
+                safety.assert_not_protected(rel)
+                if self.block_ignored and rel != "." and await self._is_ignored(rel):
+                    raise PermissionError(f"'{rel}' is ignored by .gitignore and BLOCK_WRITES_TO_IGNORED=true")
+
+        st = await self.status()
+        if st.is_clean:
+            raise GitError("Working tree is completely clean. Nothing to commit.")
+
+        if rels:
+            stat_res = await self._git("diff", "HEAD", "--stat", "--no-color", "--no-ext-diff", "--", *rels)
+            diff_text = stat_res.stdout.strip()
+            untracked = [e.path for e in st.entries if e.kind == "untracked" and (e.path in rels or any(e.path.startswith(r.rstrip("/") + "/") for r in rels))]
+            if not diff_text and not untracked:
+                raise GitError(f"No changes to commit in the specified paths: {rels}")
+            affected_summary = f"{len(rels)} specified path(s)"
+        else:
+            valid_entries = [e for e in st.entries if not safety.is_protected(e.path) and e.kind != "ignored"]
+            if not valid_entries:
+                raise GitError("No valid changes to commit (all changes are protected or ignored)")
+            stat_res = await self._git("diff", "HEAD", "--stat", "--no-color", "--no-ext-diff")
+            diff_text = stat_res.stdout.strip()
+            untracked = [e.path for e in valid_entries if e.kind == "untracked"]
+            affected_summary = f"{len(valid_entries)} file(s)"
+
+        branch = await self.current_branch() or "detached HEAD"
+        first_line = message.splitlines()[0]
+        preview_parts = [
+            f"Target branch: {branch}",
+            f"Commit message: {first_line}",
+            f"Files to commit ({affected_summary}):\n{diff_text or '(new untracked files only)'}",
+        ]
+        if untracked:
+            preview_parts.append(f"Untracked files to stage and commit ({len(untracked)}):\n" + "\n".join(f"  + {u}" for u in untracked[:20]))
+            if len(untracked) > 20:
+                preview_parts.append(f"  ... and {len(untracked) - 20} more untracked files")
+
+        preview_parts.append("HUMAN-IN-THE-LOOP INTEGRITY: Creates a permanent commit in repository history under your Git author identity.")
+        preview = "\n\n".join(preview_parts)
+
+        fingerprint = await self.fingerprint(extra=f"commit:{first_line}:{','.join(rels) if rels else 'all'}")
+        return Prepared(
+            tool="git_commit",
+            args={"message": message, "paths": rels},
+            summary=f"git_commit: '{first_line}' ({affected_summary})",
+            preview=preview,
+            fingerprint=fingerprint
+        )
+
+    async def prepare_push(self, remote: str = "origin", branch: Optional[str] = None, set_upstream: bool = False) -> Prepared:
+        remote = validate_ref_name(remote, "remote")
+        target_branch = branch or await self.current_branch()
+        if not target_branch:
+            raise GitError("Cannot push in a detached HEAD state. Switch to a branch first.")
+        target_branch = validate_ref_name(target_branch, "branch")
+
+        remotes_res = await self._git("remote", check=False)
+        existing_remotes = [r.strip() for r in remotes_res.stdout.splitlines() if r.strip()]
+        if remote not in existing_remotes:
+            raise GitError(f"Remote '{remote}' not found. Configured remotes: {existing_remotes or 'None'}")
+
+        remote_branch_ref = f"{remote}/{target_branch}"
+        has_remote_branch = (await self._git("rev-parse", "--verify", "--quiet", remote_branch_ref, check=False)).ok
+        if has_remote_branch:
+            log_res = await self._git("log", "--oneline", "--no-color", "-n", "30", f"{remote_branch_ref}..HEAD", check=False)
+            outgoing_commits = log_res.stdout.strip() if log_res.ok else ""
+        else:
+            log_res = await self._git("log", "--oneline", "--no-color", "-n", "30", "HEAD", check=False)
+            outgoing_commits = log_res.stdout.strip() if log_res.ok else ""
+
+        count = len(outgoing_commits.splitlines()) if outgoing_commits else 0
+        preview_lines = [
+            f"Remote repository: {remote}",
+            f"Target branch: {target_branch}",
+            f"Set upstream (-u): {set_upstream}",
+            f"Outgoing commits to push ({count}):\n{outgoing_commits or '(branch is up to date or initial push)'}",
+            "REMOTE PUSH: Publishes commits to the remote repository (e.g. GitHub). Requires approved authorization."
+        ]
+        preview = "\n\n".join(preview_lines)
+
+        fingerprint = await self.fingerprint(extra=f"push:{remote}:{target_branch}")
+        return Prepared(
+            tool="git_push",
+            args={"remote": remote, "branch": target_branch, "set_upstream": set_upstream},
+            summary=f"git_push: push '{target_branch}' to '{remote}' ({count} commit(s))",
+            preview=preview,
+            fingerprint=fingerprint
+        )
+
     # ------------------------------------------------------------------ DANGEROUS: execute
     async def execute(self, tool: str, args: Dict[str, Any]) -> OperationResult:
-        handlers = {"git_merge": self._exec_merge, "git_revert": self._exec_revert, "git_restore": self._exec_restore}
+        handlers = {
+            "git_merge": self._exec_merge,
+            "git_revert": self._exec_revert,
+            "git_restore": self._exec_restore,
+            "git_commit": self._exec_commit,
+            "git_push": self._exec_push,
+        }
         handler = handlers.get(tool)
         if handler is None:
             raise GitError(f"Unknown action: {tool}")
@@ -383,3 +495,57 @@ class GitService:
         await self._git("restore", "--source=HEAD", "--staged", "--worktree", "--", *rels)
         return OperationResult(message=f"Restored {len(rels)} path(s) to HEAD", head_before=before,
                                head_after=before, backup_ref=backup)
+
+    async def _exec_commit(self, args: Dict[str, Any]) -> OperationResult:
+        message = args["message"]
+        rels = args.get("paths")
+        from core import safety
+
+        before = await self.head_sha()
+        backup = await self._backup_ref("pre-commit")
+
+        if rels:
+            for rel in rels:
+                safety.assert_not_protected(rel)
+            await self._git("add", "--", *rels)
+        else:
+            st = await self.status()
+            valid_paths = [e.path for e in st.entries if not safety.is_protected(e.path) and e.kind != "ignored"]
+            if not valid_paths:
+                raise GitError("No valid files to commit (all modified files are protected or ignored)")
+            await self._git("add", "--", *valid_paths)
+
+        ident = await self._identity_args()
+        res = await self._git(*ident, "commit", "-m", message, check=False)
+        if not res.ok:
+            raise GitError("Commit failed: " + str(self._fail(["commit"], res)))
+
+        after = await self.head_sha()
+        return OperationResult(
+            message=f"Committed {after[:8] if after else ''}: {message.splitlines()[0]}",
+            head_before=before,
+            head_after=after,
+            backup_ref=backup
+        )
+
+    async def _exec_push(self, args: Dict[str, Any]) -> OperationResult:
+        remote = args["remote"]
+        branch = args["branch"]
+        set_upstream = args.get("set_upstream", False)
+
+        cmd = ["push"]
+        if set_upstream:
+            cmd.append("-u")
+        cmd.extend([remote, branch])
+
+        before = await self.head_sha()
+        res = await self._git(*cmd, timeout=max(self.timeout, 120), check=False)
+        if not res.ok:
+            raise GitError("Push failed: " + str(self._fail(["push"], res)))
+
+        return OperationResult(
+            message=f"Pushed branch '{branch}' to remote '{remote}'",
+            head_before=before,
+            head_after=before,
+            backup_ref=None
+        )

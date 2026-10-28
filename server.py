@@ -17,7 +17,9 @@ CodeScope MCP Server Guidelines:
   * git_log(limit=20, path=None, rev=None, project_path): View recent commits.
   * git_show(rev='HEAD', max_lines=500, project_path): View specific commit details and patch.
   * git_branch_list(project_path): List local Git branches.
-  * git_merge, git_revert, git_restore: Gated destructive Git actions requiring human approval code.
+  * git_merge, git_revert, git_restore, git_commit, git_push: Gated destructive Git actions requiring human approval code.
+  * git_commit(message, paths=None, project_path): Stage changes and create a permanent git commit with human approval code.
+  * git_push(remote='origin', branch=None, set_upstream=False, project_path): Push local branch commits to remote repository (e.g. GitHub) with human approval code.
   * confirm_action(action_id, approval_code): Execute a previewed dangerous action with the 6-digit code.
 - Available Verification Tools:
   * list_checks, run_check, run_all_checks: Run configured or auto-detected test/lint/build checks.

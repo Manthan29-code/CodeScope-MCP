@@ -89,6 +89,8 @@ def test_server_registration_git_read_only(monkeypatch):
     assert git_read_tools.issubset(names)
     assert "git_branch_create" not in names
     assert "git_merge" not in names
+    assert "git_commit" not in names
+    assert "git_push" not in names
 
 
 def test_server_registration_git_with_write(monkeypatch):
@@ -119,6 +121,8 @@ def test_server_registration_git_with_write(monkeypatch):
         "git_merge",
         "git_revert",
         "git_restore",
+        "git_commit",
+        "git_push",
         "confirm_action",
     }
     assert all_git_tools.issubset(names)
@@ -193,6 +197,8 @@ def test_server_registration_all_enabled(monkeypatch):
         "git_merge",
         "git_revert",
         "git_restore",
+        "git_commit",
+        "git_push",
         "confirm_action",
     }
     expected_verify = {

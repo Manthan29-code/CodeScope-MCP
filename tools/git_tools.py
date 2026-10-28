@@ -256,6 +256,47 @@ def register_git_tools(mcp: FastMCP, git: GitService, gate: ApprovalGate, *, ena
 
     @mcp.tool(annotations=DESTRUCTIVE)
     @_guard
+    async def git_commit(message: str, paths: Optional[List[str]] = None, ctx: Optional[Context] = None, project_path: str = ".") -> dict:
+        """DANGEROUS. Stage changes and create a permanent git commit in the target repository.
+        The user must approve. You will get a preview with diffs and affected files.
+        Show it to the user and wait for their approval. Never call confirm_action unless
+        the user gave you the approval code.
+        
+        Args:
+            message: Commit message describing the changes.
+            paths: Optional list of relative file paths to commit. If omitted, stages and commits all modified and untracked non-ignored files (protected files like .env are always excluded).
+            ctx: FastMCP context for approval elicitation.
+            project_path: Absolute or relative path to target repository root (default "."). Must be within WRITE_ALLOWED_ROOTS.
+        """
+        git_target = _get_git_service(project_path, for_write=True, default_git=git)
+        await git_target.ensure_repo()
+        prepared = await git_target.prepare_commit(message, paths)
+        prepared.args["project_path"] = str(git_target.root)
+        return await _run_gated(ctx, git_target, prepared)
+
+    @mcp.tool(annotations=DESTRUCTIVE)
+    @_guard
+    async def git_push(remote: str = "origin", branch: Optional[str] = None, set_upstream: bool = False, ctx: Optional[Context] = None, project_path: str = ".") -> dict:
+        """DANGEROUS. Push local branch commits to a remote repository (e.g. GitHub).
+        The user must approve. You will get a preview showing outgoing commits.
+        Show it to the user and wait for their approval. Never call confirm_action unless
+        the user gave you the approval code.
+        
+        Args:
+            remote: Remote repository name (default "origin").
+            branch: Branch to push (defaults to current branch).
+            set_upstream: If True, sets upstream tracking reference (-u).
+            ctx: FastMCP context for approval elicitation.
+            project_path: Absolute or relative path to target repository root (default "."). Must be within WRITE_ALLOWED_ROOTS.
+        """
+        git_target = _get_git_service(project_path, for_write=True, default_git=git)
+        await git_target.ensure_repo()
+        prepared = await git_target.prepare_push(remote, branch, set_upstream)
+        prepared.args["project_path"] = str(git_target.root)
+        return await _run_gated(ctx, git_target, prepared)
+
+    @mcp.tool(annotations=DESTRUCTIVE)
+    @_guard
     async def confirm_action(action_id: str, approval_code: str, project_path: Optional[str] = None) -> dict:
         """Execute a previewed dangerous git action. approval_code is shown ONLY on the CodeScope
         server console and must come from the user. Never guess or invent it.

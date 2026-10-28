@@ -145,3 +145,47 @@ def test_dangerous_tool_remembers_project_path(sandbox_repo, monkeypatch):
 
     # File in sandbox is restored
     assert (sandbox_repo / "a.txt").read_text(encoding="utf-8") == "initial\n"
+
+
+def test_git_commit_and_push_gated(sandbox_repo, monkeypatch, tmp_path):
+    monkeypatch.setattr(config, "READ_ALLOWED_ROOTS", [str(sandbox_repo)])
+    monkeypatch.setattr(config, "WRITE_ALLOWED_ROOTS", [str(sandbox_repo)])
+    monkeypatch.setattr(config, "ENABLE_WRITE_TOOLS", True)
+
+    mcp = FastMCP("test_mcp")
+    default_git = GitService(config.PROJECT_ROOT)
+    conf_svc = ConfirmationService(ttl_seconds=60)
+    gate = ApprovalGate(conf_svc, mode="code")
+    register_git_tools(mcp, default_git, gate, enable_write_tools=True)
+
+    git_commit = asyncio.run(_get_tool_fn(mcp, "git_commit"))
+    git_push = asyncio.run(_get_tool_fn(mcp, "git_push"))
+    confirm_action = asyncio.run(_get_tool_fn(mcp, "confirm_action"))
+
+    # 1. Test commit gating
+    (sandbox_repo / "feature.py").write_text("print('feature')\n", encoding="utf-8")
+    prep_commit = asyncio.run(git_commit(message="feat: add feature", project_path=str(sandbox_repo)))
+    assert prep_commit["ok"] is True
+    assert prep_commit["status"] == "approval_required"
+    action_id = prep_commit["action_id"]
+
+    code = conf_svc.peek(action_id).code
+    res = asyncio.run(confirm_action(action_id=action_id, approval_code=code))
+    assert res["ok"] is True
+    assert "Committed" in res["message"]
+
+    # 2. Test push gating with a bare remote
+    remote_bare = tmp_path / "remote.git"
+    subprocess.run(["git", "init", "--bare", str(remote_bare)], check=True)
+    subprocess.run(["git", "remote", "add", "origin", str(remote_bare)], cwd=sandbox_repo, check=True)
+
+    prep_push = asyncio.run(git_push(remote="origin", set_upstream=True, project_path=str(sandbox_repo)))
+    assert prep_push["ok"] is True
+    assert prep_push["status"] == "approval_required"
+    push_id = prep_push["action_id"]
+
+    push_code = conf_svc.peek(push_id).code
+    res_push = asyncio.run(confirm_action(action_id=push_id, approval_code=push_code))
+    assert res_push["ok"] is True
+    assert "Pushed" in res_push["message"]
+

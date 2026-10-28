@@ -24,6 +24,8 @@ TOOL_RISK: Dict[str, Risk] = {
     "git_merge": Risk.DANGEROUS,
     "git_revert": Risk.DANGEROUS,
     "git_restore": Risk.DANGEROUS,
+    "git_commit": Risk.DANGEROUS,
+    "git_push": Risk.DANGEROUS,
     "confirm_action": Risk.DANGEROUS,
     "list_checks": Risk.READ,
     "run_check": Risk.EXECUTE,
