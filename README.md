@@ -24,6 +24,7 @@ Instead of naively dumping entire folders or overwhelming context windows with g
   - [Configuration & Sizing Guide](CONFIGURATION_GUIDE.md)
   - [Running the Server](#running-the-server)
 - [Working with Write Tools & AI Prompting](#-working-with-write-tools--ai-prompting)
+- [Automated Verification & .codescope.toml Guide](#-automated-verification--codescopetoml-guide)
 - [Exposing with ngrok (Remote / Cloud Setup)](#-exposing-with-ngrok-remote--cloud-setup)
 - [Connecting to MCP Clients](#-connecting-to-mcp-clients)
   - [Remote Connectors Guide (Claude, ChatGPT, Gemini)](REMOTE_CONNECTORS_GUIDE.md)
@@ -496,6 +497,213 @@ Build a complete, modular web application for WorkPulse in `C:\MyProject\WorkPul
   │       └── utils.js
   └── README.md
 - Use `write_file` with `create_parents=True` for each file.
+```
+
+---
+
+## 🧪 Automated Verification & `.codescope.toml` Guide
+
+CodeScope MCP includes a sandboxed verification engine (`ENABLE_VERIFICATION_TOOLS=true`) that lets cloud AI assistants run build, lint, and test checks against your local code. This section explains the `.codescope.toml` configuration, why it exists, how to write it, and how to have an LLM generate it for any project.
+
+### 1. What Is `.codescope.toml`?
+
+`.codescope.toml` (templated by [`.codescope.toml.example`](.codescope.toml.example)) is a project-level configuration file placed in your repository root. It defines a whitelist of named verification tasks (e.g. `lint`, `test`, `build`, `typecheck`).
+
+Once defined:
+- The AI can discover available checks via `list_checks`.
+- The AI can run individual checks via `run_check(name="test")` or everything via `run_all_checks()`.
+- Write operations (`write_file`, `edit_file`) can automatically execute checks post-write using `verify=["lint", "test"]`.
+
+---
+
+### 2. Why We Use It (The Security & Control Model)
+
+Allowing remote cloud LLMs to execute arbitrary shell commands is an extreme security risk:
+- ❌ **No Arbitrary Remote Code Execution (RCE)**: An LLM could hallucinate destructive commands (`rm -rf /`), leak credentials via `curl`, or download untrusted binaries if given an open terminal. CodeScope MCP **strictly bans arbitrary shell commands**.
+- 🔒 **Immutable by the AI (`ProtectedPathError`)**: `.codescope.toml` is a **protected path** in CodeScope's security engine (`core/safety.py`). If an AI agent attempts to modify or delete `.codescope.toml` using `write_file` or `edit_file`, CodeScope instantly aborts with a permission error. This prevents prompt injections from altering your check definitions.
+- 🐍 **Smart Python Virtualenv Binding (`{python}`)**: In Python projects, invoking `python` often accidentally targets a global system interpreter missing your dependencies. The `{python}` placeholder automatically detects and resolves to the project's virtualenv interpreter (`.venv\Scripts\python.exe` on Windows or `.venv/bin/python` on Linux/macOS).
+- ⚡ **Live Hot-Reloading**: Changes you make to `.codescope.toml` are re-read dynamically on every verification request—no need to restart the CodeScope server.
+- 🔄 **Safe Fallback Autodetection**: If `.codescope.toml` does not exist, CodeScope falls back to discovering standard commands from `package.json`, `pyproject.toml`, `Cargo.toml`, or `go.mod`. However, `.codescope.toml` is strongly recommended for custom flags, subdirectories (`cwd`), or monorepos.
+
+---
+
+### 3. How to Make `.codescope.toml`
+
+Place a file named `.codescope.toml` in your project root. Here is the structure:
+
+```toml
+# {python} = expands to project virtualenv (.venv/venv/env), else system python
+# "cmd" = MUST ALWAYS be a list of strings (raw shell strings are rejected)
+
+[checks.lint]
+description = "Ruff linting"
+cmd = ["{python}", "-m", "ruff", "check", "."]
+timeout = 120
+
+[checks.test]
+description = "Run pytest suite"
+cmd = ["{python}", "-m", "pytest", "-q"]
+timeout = 300
+
+[checks.build]
+description = "Production frontend build"
+cmd = ["npm", "run", "build"]
+cwd = "frontend"
+timeout = 600
+```
+
+#### Configuration Schema & Rules:
+| Parameter | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `[checks.<name>]` | Table | **Yes** | Check name matching `^[A-Za-z0-9_-]{1,40}$` (e.g. `lint`, `test`, `build-ui`). |
+| `cmd` | List of Strings | **Yes** | The executable and arguments as separate strings (e.g. `["npm", "test"]`). **Strings like `"npm test"` are rejected** to prevent shell injection. |
+| `description` | String | No | Human and AI-readable explanation surfaced in `list_checks`. |
+| `timeout` | Integer | No | Execution timeout in seconds (defaults to `VERIFY_DEFAULT_TIMEOUT_SECONDS=300`). |
+| `cwd` | String | No | Working directory relative to project root (e.g. `"frontend"` or `"apps/api"`). |
+
+#### Framework & Language Examples:
+
+##### Python (FastAPI / Flask / Django / Package)
+```toml
+[checks.lint]
+description = "Ruff code style and lint check"
+cmd = ["{python}", "-m", "ruff", "check", "."]
+timeout = 60
+
+[checks.typecheck]
+description = "Mypy static type checking"
+cmd = ["{python}", "-m", "mypy", "."]
+timeout = 120
+
+[checks.test]
+description = "Pytest unit tests"
+cmd = ["{python}", "-m", "pytest", "-q"]
+timeout = 300
+```
+
+##### Node.js / TypeScript / React / Next.js
+```toml
+[checks.lint]
+description = "ESLint check"
+cmd = ["npm", "run", "lint"]
+timeout = 120
+
+[checks.typecheck]
+description = "TypeScript compile check"
+cmd = ["npx", "tsc", "--noEmit"]
+timeout = 120
+
+[checks.test]
+description = "Vitest / Jest test suite"
+cmd = ["npm", "test", "--", "--run"]
+timeout = 300
+
+[checks.build]
+description = "Production build verification"
+cmd = ["npm", "run", "build"]
+timeout = 300
+```
+
+##### Rust
+```toml
+[checks.lint]
+description = "Clippy linter"
+cmd = ["cargo", "clippy", "--", "-D", "warnings"]
+timeout = 180
+
+[checks.test]
+description = "Cargo test"
+cmd = ["cargo", "test"]
+timeout = 300
+```
+
+##### Go
+```toml
+[checks.lint]
+description = "Go vet"
+cmd = ["go", "vet", "./..."]
+timeout = 120
+
+[checks.test]
+description = "Go test with race detector"
+cmd = ["go", "test", "-race", "./..."]
+timeout = 300
+```
+
+##### Full-Stack Monorepo
+```toml
+[checks.backend-lint]
+description = "Python backend lint"
+cmd = ["{python}", "-m", "ruff", "check", "."]
+cwd = "backend"
+timeout = 60
+
+[checks.backend-test]
+description = "Python backend test"
+cmd = ["{python}", "-m", "pytest", "-q"]
+cwd = "backend"
+timeout = 300
+
+[checks.frontend-lint]
+description = "Next.js frontend lint"
+cmd = ["npm", "run", "lint"]
+cwd = "frontend"
+timeout = 120
+
+[checks.frontend-build]
+description = "Next.js frontend build"
+cmd = ["npm", "run", "build"]
+cwd = "frontend"
+timeout = 300
+```
+
+---
+
+### 4. How to Generate `.codescope.toml` with an LLM by Prompt
+
+> [!IMPORTANT]
+> **Can the LLM create `.codescope.toml` directly using `write_file`?**
+> **No.** By design, `.codescope.toml` is a protected path. If Claude or ChatGPT calls `write_file(file_path=".codescope.toml", ...)`, CodeScope returns:
+> `ProtectedPathError: '.codescope.toml' is protected and cannot be modified through CodeScope`.
+>
+> **How to do it instead**:
+> - **Option 1 (Recommended - Chat Generation)**: Instruct the LLM to inspect your repo and output the formatted TOML in chat so you can save it.
+> - **Option 2 (Draft Template File)**: Instruct the LLM to write to `.codescope.toml.example` (which is permitted), then copy/rename it to `.codescope.toml`.
+
+#### Ready-to-Use Prompts for Claude, ChatGPT & Gemini
+
+##### 📋 Prompt: Automatic Project Discovery & Generation (Option 1 - Output to Chat)
+Copy and paste this prompt directly into your cloud chat LLM (Claude.ai, ChatGPT, or Gemini):
+
+```text
+Please inspect this repository using CodeScope MCP read tools to create a `.codescope.toml` verification configuration for my project.
+
+Follow these steps:
+1. Use `list_directory_tree` (with max_depth=2) to inspect the project layout.
+2. Read configuration files like `package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `Makefile`, or test configs using `read_file`.
+3. Detect the package managers, test runners, linters, and build commands used in this repository.
+4. Output a complete, valid `.codescope.toml` block in your chat response according to these rules:
+   - Every check must be under `[checks.<name>]` where name matches ^[A-Za-z0-9_-]{1,40}$.
+   - The `cmd` parameter MUST be a JSON/TOML array of individual string arguments (e.g. ["npm", "run", "lint"]). NEVER output a single shell string like "npm run lint".
+   - For Python projects, use the "{python}" macro for the python executable (e.g. ["{python}", "-m", "pytest"]).
+   - Include appropriate `timeout` (in seconds), `description`, and `cwd` (if commands run in a subdirectory).
+5. Explain how I should save this file to the root of my project as `.codescope.toml`.
+```
+
+##### 📋 Prompt: Monorepo / Multi-Folder Discovery
+For repositories with separate client and server subdirectories:
+
+```text
+Please inspect both frontend and backend subdirectories in this project using CodeScope MCP read tools.
+Identify the lint, test, typecheck, and build commands for each component.
+Generate a unified `.codescope.toml` using appropriate `cwd` values (e.g., cwd = "frontend" and cwd = "backend"), ensuring all `cmd` values are formatted as arrays of strings.
+```
+
+##### 📋 Prompt: Write to Template File (Option 2 - Auto-Draft)
+```text
+Inspect the repository dependencies and test scripts using CodeScope read tools.
+Then, write a complete verification check configuration into `.codescope.toml.example` using `write_file(file_path=".codescope.toml.example", overwrite=True)`.
+Ensure all `cmd` fields are string arrays (e.g. ["npm", "test"]). I will review it and activate it as `.codescope.toml`.
 ```
 
 ---
