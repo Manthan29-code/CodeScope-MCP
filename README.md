@@ -165,6 +165,8 @@ Provides safe Git version control operations directly over MCP:
   - `git_merge`: Merge a branch into the current branch (automatically aborts and rolls back cleanly on merge conflicts).
   - `git_revert`: Revert a specific commit by creating an inverse commit.
   - `git_restore`: Discard uncommitted modifications in specified files, resetting them to HEAD.
+  - `git_commit`: Stage changes and create a permanent git commit in the repository. Preserves Human-in-the-Loop Git Integrity: signs commits under your author identity (`user.name`, `user.email`), automatically filters out protected paths (`.env`, keys), and prevents intermediate dirty micro-commits while the AI iterates.
+  - `git_push`: Publish commits from the active branch to a remote repository (e.g. GitHub) using safe, non-force push. Shows outgoing commit preview prior to authorization.
   - **Recovery Protection**: Dangerous operations save an emergency recovery ref under `refs/codescope/backup/` prior to execution.
   - **Confirmation Gate**: Layer 2 client elicitation (`ctx.elicit()`) or Layer 3 out-of-band console approval code via `confirm_action(action_id, approval_code)`.
 

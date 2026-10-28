@@ -64,6 +64,8 @@ Git tools are registered when `ENABLE_GIT_TOOLS=true`. Low-write and dangerous t
 | `git_merge` | DANGEROUS | Merge branch into current (auto-abort on conflict) | Branch | Yes (preview + elicit/code) |
 | `git_revert` | DANGEROUS | Revert a commit (creates undo commit) | Commit SHA | Yes (preview + elicit/code) |
 | `git_restore` | DANGEROUS | Discard uncommitted changes in paths (backup ref created) | Paths | Yes (preview + elicit/code) |
+| `git_commit` | DANGEROUS | Stage non-protected changes and create commit (author-signed) | Message, paths | Yes (preview + elicit/code) |
+| `git_push` | DANGEROUS | Push branch commits to remote repository (e.g. GitHub) | Remote, branch, set_upstream | Yes (preview + elicit/code) |
 | `confirm_action` | DANGEROUS | Execute previewed action with console approval code | action_id, approval_code | Yes |
 
 ### Automated Verification Tools

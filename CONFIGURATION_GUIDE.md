@@ -222,15 +222,20 @@ CodeScope MCP enforces strict boundary validation on all read and write tools to
 - **Purpose:** Enables Git inspection and manipulation tools. When `false`, no Git tools are registered.
 - **Tools Enabled:**
   - Read: `git_status`, `git_diff`, `git_log`, `git_show`, `git_branch_list`
-  - Write (if `ENABLE_WRITE_TOOLS=true`): `git_branch_create`, `git_switch`, `git_merge`, `git_revert`, `git_restore`, `confirm_action`
+  - Write (if `ENABLE_WRITE_TOOLS=true`): `git_branch_create`, `git_switch`, `git_merge`, `git_revert`, `git_restore`, `git_commit`, `git_push`, `confirm_action`
 
 #### `GIT_CONFIRM_MODE`
 - **Default:** `auto`
 - **Type:** String (`auto` | `elicit` | `code`)
-- **Purpose:** Mechanism for authorizing dangerous actions (`git_merge`, `git_revert`, `git_restore`).
+- **Purpose:** Mechanism for authorizing dangerous actions (`git_merge`, `git_revert`, `git_restore`, `git_commit`, `git_push`).
   - `auto`: Attempts client-side UI elicitation (`ctx.elicit()`) if supported; falls back to console approval code.
   - `elicit`: Requires client UI elicitation (fails if unsupported by client).
   - `code`: Prints a 6-digit one-time code to server console (stderr) only. The user reads and provides it to the model.
+
+> [!IMPORTANT]
+> **Human-in-the-Loop Git Integrity & Safety:**
+> - `git_commit`: Stages approved changes and records a permanent commit under your Git author identity (`user.name`, `user.email`, GPG key). Protected files (`.env`, private keys) are automatically excluded from staging. Requires human approval to prevent intermediate dirty micro-commits during multi-step AI tasks.
+> - `git_push`: Publishes commits from the active local branch to a configured remote repository (e.g. GitHub) using safe, non-force push. Requires human authorization to prevent accidental or unauthorized code distribution.
 
 #### `GIT_CONFIRM_TTL_SECONDS`
 - **Default:** `300` (5 minutes)
