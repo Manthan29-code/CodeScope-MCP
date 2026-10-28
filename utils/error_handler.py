@@ -15,12 +15,36 @@ def format_tool_error(exc: Exception, tool_name: str = "") -> Dict[str, Any]:
     msg = str(exc).strip() or exc_type
 
     # Classify error type and provide actionable hint
-    if "READ_ALLOWED_ROOTS" in msg or "WRITE_ALLOWED_ROOTS" in msg or "Access denied" in msg or "RootNotAllowedError" in exc_type:
+    if "protectedpatherror" in exc_type.lower() or "protected by safety rules" in msg.lower() or "contains protected" in msg.lower():
+        error_type = "ProtectedPathError"
+        hint = "Access denied: the target path matches protected files or patterns (.git, .env, keys, config) and cannot be modified."
+    elif "ignoredpatherror" in exc_type.lower() or "is ignored" in msg.lower():
+        error_type = "IgnoredPathError"
+        hint = "Access denied: the target path matches .gitignore or default ignore patterns."
+    elif "editmatcherror" in exc_type.lower() or "old_string" in msg.lower():
+        error_type = "EditMatchError"
+        hint = "The old_string was not found or was not unique in the target file. Check whitespace and exact indentation, or add more surrounding context lines."
+    elif "stalefileerror" in exc_type.lower() or "hash mismatch" in msg.lower():
+        error_type = "StaleFileError"
+        hint = "The file content changed since it was read. Call read_file again to fetch the latest content and SHA-256 hash before modifying."
+    elif "filetoolargeerror" in exc_type.lower() or "max_write_size_bytes" in msg.lower():
+        error_type = "FileTooLargeError"
+        hint = "The write content exceeds MAX_WRITE_SIZE_BYTES. Break the content into smaller files or use edit_file for partial edits."
+    elif "READ_ALLOWED_ROOTS" in msg or "WRITE_ALLOWED_ROOTS" in msg or "Access denied" in msg or "RootNotAllowedError" in exc_type:
         error_type = "AccessDeniedError"
         hint = (
             "The requested project_path is outside the configured allowed roots. "
             "Ensure the path is approved in .env (ALLOWED_PROJECT_ROOTS, READ_ALLOWED_ROOTS, or WRITE_ALLOWED_ROOTS)."
         )
+    elif "writedisablederror" in exc_type.lower() or "write operations are disabled" in msg.lower():
+        error_type = "WriteDisabledError"
+        hint = "Write operations are disabled on the server. Set ENABLE_WRITE_TOOLS=true in the server configuration to enable file modifications."
+    elif "binaryfileerror" in exc_type.lower() or "binary file" in msg.lower() or "null bytes" in msg.lower():
+        error_type = "BinaryFileError"
+        hint = "Cannot perform text operations on binary files. CodeScope text tools only operate on valid text files."
+    elif isinstance(exc, FileExistsError) or "file already exists" in msg.lower() or "destination file already exists" in msg.lower():
+        error_type = "FileExistsError"
+        hint = "The target file already exists. Set overwrite=True in write_file to replace it, or use edit_file for partial modifications."
     elif "does not exist" in msg.lower() or "not found" in msg.lower() or isinstance(exc, FileNotFoundError):
         error_type = "PathNotFoundError"
         hint = "The specified path does not exist on the local filesystem. Verify that the directory or file exists and the path is spelled correctly."
@@ -37,7 +61,7 @@ def format_tool_error(exc: Exception, tool_name: str = "") -> Dict[str, Any]:
     elif "conflict" in msg.lower() or "merge failed" in msg.lower():
         error_type = "MergeConflictError"
         hint = "The merge resulted in conflicts and was automatically aborted. The repository remains clean and unchanged."
-    elif "already exists" in msg.lower():
+    elif "branch" in msg.lower() and "already exists" in msg.lower():
         error_type = "BranchAlreadyExistsError"
         hint = "A branch with that name already exists. Choose a different name or switch to it using git_switch()."
     elif "unknown or expired action_id" in msg.lower():
@@ -82,6 +106,12 @@ _EXPECTED_ERROR_NAMES = {
     "ReadRootNotAllowedError",
     "RootNotAllowedError",
     "WriteDisabledError",
+    "WriteError",
+    "EditMatchError",
+    "FileTooLargeError",
+    "BinaryFileError",
+    "StaleFileError",
+    "FileExistsError",
     "ProtectedPathError",
     "IgnoredPathError",
     "FileNotFoundError",
@@ -92,7 +122,7 @@ _EXPECTED_ERROR_NAMES = {
 def _log_tool_exception(name: str, exc: Exception, kwargs: dict) -> None:
     exc_type = type(exc).__name__
     is_expected = exc_type in _EXPECTED_ERROR_NAMES or isinstance(
-        exc, (ValueError, PermissionError, FileNotFoundError)
+        exc, (ValueError, PermissionError, FileNotFoundError, FileExistsError)
     )
     # Sanitize arguments: truncate long strings or remove sensitive keys if any
     safe_kwargs = {k: (str(v)[:100] + "..." if isinstance(v, str) and len(v) > 100 else v) for k, v in kwargs.items()}

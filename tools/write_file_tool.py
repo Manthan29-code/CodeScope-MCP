@@ -1,6 +1,6 @@
 from typing import Optional
 from services.write_service import write_one
-from models.schemas import WriteFileOutput
+from utils.error_handler import handle_tool_errors
 
 annotations = {
     "readOnlyHint": False,
@@ -9,7 +9,10 @@ annotations = {
     "openWorldHint": False,
 }
 
+_guard = handle_tool_errors()
 
+
+@_guard
 def write_file(
     file_path: str,
     content: str,
@@ -19,7 +22,7 @@ def write_file(
     expected_hash: Optional[str] = None,
     dry_run: bool = False,
     verify: Optional[list[str]] = None
-) -> WriteFileOutput:
+) -> dict:
     """
     Creates a new file or completely overwrites an existing file.
     
@@ -48,7 +51,7 @@ def write_file(
         dry_run: If True, previews changes with unified diff without modifying disk (default False).
         verify: Optional list of check names (e.g. ['lint', 'test']) to execute after write.
     """
-    return write_one(
+    res = write_one(
         project_path=project_path,
         file_path=file_path,
         content=content,
@@ -58,3 +61,4 @@ def write_file(
         dry_run=dry_run,
         verify=verify
     )
+    return {"ok": True, **res.model_dump()}

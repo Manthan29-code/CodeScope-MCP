@@ -1,6 +1,7 @@
 from typing import List, Optional
 from services.edit_service import edit_one
-from models.schemas import EditOperation, EditFileOutput
+from models.schemas import EditOperation
+from utils.error_handler import handle_tool_errors
 
 annotations = {
     "readOnlyHint": False,
@@ -9,7 +10,10 @@ annotations = {
     "openWorldHint": False,
 }
 
+_guard = handle_tool_errors()
 
+
+@_guard
 def edit_file(
     file_path: str,
     edits: List[EditOperation],
@@ -17,7 +21,7 @@ def edit_file(
     expected_hash: Optional[str] = None,
     dry_run: bool = False,
     verify: Optional[List[str]] = None
-) -> EditFileOutput:
+) -> dict:
     """
     Applies exact-match string replacement edits sequentially to an existing text file.
     
@@ -39,7 +43,7 @@ def edit_file(
         dry_run: If True, returns the unified diff preview without modifying disk (default False).
         verify: Optional list of check names (e.g. ['lint', 'test']) to execute after editing.
     """
-    return edit_one(
+    res = edit_one(
         project_path=project_path,
         file_path=file_path,
         edits=edits,
@@ -47,3 +51,4 @@ def edit_file(
         dry_run=dry_run,
         verify=verify
     )
+    return {"ok": True, **res.model_dump()}

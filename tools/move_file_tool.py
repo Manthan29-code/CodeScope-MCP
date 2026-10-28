@@ -1,5 +1,5 @@
 from services.file_ops_service import move_one
-from models.schemas import MoveFileOutput
+from utils.error_handler import handle_tool_errors
 
 annotations = {
     "readOnlyHint": False,
@@ -8,13 +8,16 @@ annotations = {
     "openWorldHint": False,
 }
 
+_guard = handle_tool_errors()
 
+
+@_guard
 def move_file(
     source_path: str,
     destination_path: str,
     project_path: str = ".",
     create_parents: bool = False
-) -> MoveFileOutput:
+) -> dict:
     """
     Moves or renames a single file within the project directory.
     
@@ -30,9 +33,10 @@ def move_file(
         project_path: Absolute or relative path to project root (default ".").
         create_parents: Set to True to create missing destination parent directories.
     """
-    return move_one(
+    res = move_one(
         project_path=project_path,
         source_path=source_path,
         destination_path=destination_path,
         create_parents=create_parents
     )
+    return {"ok": True, **res.model_dump()}

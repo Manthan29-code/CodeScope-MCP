@@ -1,6 +1,6 @@
 from typing import Optional
 from services.replace_service import replace_in_files as _replace_in_files
-from models.schemas import ReplaceInFilesOutput
+from utils.error_handler import handle_tool_errors
 
 annotations = {
     "readOnlyHint": False,
@@ -9,7 +9,10 @@ annotations = {
     "openWorldHint": False,
 }
 
+_guard = handle_tool_errors()
 
+
+@_guard
 def replace_in_files(
     find: str,
     replace: str,
@@ -20,7 +23,7 @@ def replace_in_files(
     case_sensitive: bool = True,
     dry_run: bool = True,
     expected_replacements: Optional[int] = None
-) -> ReplaceInFilesOutput:
+) -> dict:
     """
     Finds and replaces text across multiple matching files within the project.
     
@@ -46,7 +49,7 @@ def replace_in_files(
         dry_run: If True, previews changes and diffs without modifying files (default True).
         expected_replacements: Optional safety check on total replacement count before writing.
     """
-    return _replace_in_files(
+    res = _replace_in_files(
         project_path=project_path,
         find=find,
         replace=replace,
@@ -57,3 +60,4 @@ def replace_in_files(
         dry_run=dry_run,
         expected_replacements=expected_replacements
     )
+    return {"ok": True, **res.model_dump()}

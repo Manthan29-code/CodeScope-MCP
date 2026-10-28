@@ -440,6 +440,10 @@ Copy your public forwarding HTTPS address and append `/mcp` (e.g. `https://<subd
 > 📖 **Step-by-step connection walkthroughs**:
 > For complete setup steps, screenshots, and configuration for **Claude.ai**, **ChatGPT**, and **Google Gemini**, see [**REMOTE_CONNECTORS_GUIDE.md**](REMOTE_CONNECTORS_GUIDE.md).
 
+> [!TIP]
+> 🩺 **Troubleshooting "Error in message stream"**:
+> If your cloud chat client encounters streaming interruptions during large multi-file edits or heavy file reads, see the dedicated diagnostic and prevention guide: [**TROUBLESHOOTING_MESSAGE_STREAM.md**](TROUBLESHOOTING_MESSAGE_STREAM.md).
+
 > [!WARNING]
 > ### 🔄 Important: Refreshing Cached Tool Schemas in Claude.ai & ChatGPT
 > If you update server code or toggle Git/Verification tools in `.env`, be aware of how different chat clients cache MCP schemas:
@@ -701,7 +705,17 @@ python -m pytest -q
 
 ---
 
+## 📚 Documentation & Reference Guides
+
+- 📖 [**CONFIGURATION_GUIDE.md**](CONFIGURATION_GUIDE.md): Sizing environment limits and performance profiles for small, medium, and large monorepos.
+- 🌐 [**REMOTE_CONNECTORS_GUIDE.md**](REMOTE_CONNECTORS_GUIDE.md): Complete setup walkthrough for connecting Claude.ai, ChatGPT, and Google Gemini over ngrok.
+- 🩺 [**TROUBLESHOOTING_MESSAGE_STREAM.md**](TROUBLESHOOTING_MESSAGE_STREAM.md): Identifying causes, prevention strategies, and diagnostic steps for *"Error in message stream"*.
+- 🏛️ [**BACKEND_DOCUMENTATION.md**](BACKEND_DOCUMENTATION.md): Deep-dive backend architecture, data contracts, and security enforcement details.
+
+---
+
 ## 📄 License
 
 This project is licensed under the [MIT License](LICENSE).
+
 

@@ -1,5 +1,5 @@
 from services.file_ops_service import delete_one
-from models.schemas import DeleteFileOutput
+from utils.error_handler import handle_tool_errors
 
 annotations = {
     "readOnlyHint": False,
@@ -8,11 +8,14 @@ annotations = {
     "openWorldHint": False,
 }
 
+_guard = handle_tool_errors()
 
+
+@_guard
 def delete_file(
     file_path: str,
     project_path: str = "."
-) -> DeleteFileOutput:
+) -> dict:
     """
     Deletes a single file from the project directory.
     
@@ -25,4 +28,5 @@ def delete_file(
         file_path: Relative path to target file from project root.
         project_path: Absolute or relative path to project root (default ".").
     """
-    return delete_one(project_path=project_path, file_path=file_path)
+    res = delete_one(project_path=project_path, file_path=file_path)
+    return {"ok": True, **res.model_dump()}
