@@ -159,7 +159,7 @@ def ensure_not_ignored(root: Path, target: Path) -> None:
     ignore_mgr = IgnoreManager.get_for_project(root)
     is_dir = target.is_dir() if target.exists() else False
 
-    if ignore_mgr.is_ignored(rel_posix, is_dir=is_dir):
+    if ignore_mgr.is_ignored(rel_posix, is_dir=is_dir, allow_overrides=True):
         raise IgnoredPathError(
             f"Access denied: path '{rel_posix}' is ignored (gitignore/default list); CodeScope does not write ignored paths."
         )

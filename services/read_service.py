@@ -82,7 +82,7 @@ def read_one(
 
     # Check ignore rules
     ignore_mgr = IgnoreManager.get_for_project(root_path)
-    if ignore_mgr.is_ignored(rel_clean, is_dir=False):
+    if ignore_mgr.is_ignored(rel_clean, is_dir=False, allow_overrides=True):
         return ReadFileOutput(
             file_path=rel_clean,
             content="",

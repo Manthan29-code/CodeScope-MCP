@@ -1,4 +1,5 @@
 import os
+import re
 from pathlib import Path
 from typing import List
 from dotenv import load_dotenv
@@ -64,6 +65,13 @@ DEFAULT_IGNORE_PATTERNS: List[str] = [
     ".DS_Store",
     "Thumbs.db",
 ]
+
+# Whitelist of patterns ignored in .gitignore that CodeScope MCP is allowed to access
+# (e.g. "*.md,plan/**,spec.md")
+_allow_ignored_raw = os.getenv("CODESCOPE_ALLOW_IGNORED", "").strip()
+CODESCOPE_ALLOW_IGNORED: List[str] = [
+    p.strip() for p in re.split(r"[,;]", _allow_ignored_raw) if p.strip()
+] if _allow_ignored_raw else []
 
 def _parse_roots(raw_str: str) -> List[str]:
     if not raw_str:

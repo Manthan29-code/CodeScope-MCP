@@ -46,10 +46,10 @@ def iter_searchable_files(
                 continue
 
             if entry.is_dir():
-                if not ignore_mgr.is_ignored(rel_str, is_dir=True):
+                if not ignore_mgr.is_ignored(rel_str, is_dir=True, allow_overrides=True):
                     yield from _walk(entry)
             elif entry.is_file():
-                if not ignore_mgr.is_ignored(rel_str, is_dir=False):
+                if not ignore_mgr.is_ignored(rel_str, is_dir=False, allow_overrides=True):
                     if file_pattern:
                         if fnmatch.fnmatch(name, file_pattern) or fnmatch.fnmatch(rel_str, file_pattern):
                             yield entry

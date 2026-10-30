@@ -136,6 +136,22 @@ CodeScope MCP enforces strict boundary validation on all read and write tools to
   - **Standard Development:** Keep `false`. Prevents symlinks from linking outside the approved project root.
   - **Complex Monorepos (pnpm / yarn workspaces):** Set `true` **only if** your monorepo uses internal symlinks across packages within the same root directory.
 
+#### `CODESCOPE_ALLOW_IGNORED`
+- **Default:** *None* (empty list `[]`)
+- **Type:** Comma-separated or semicolon-separated pattern string (e.g. `*.md,plan/**,spec.md`)
+- **Purpose:** Whitelists specific files or directories that are normally ignored by `.gitignore` or default ignore lists, granting the AI read, search, and write access without removing them from `.gitignore`.
+- **Why It Exists:** During AI-assisted development, projects often maintain private scratchpads, task plans, and architecture specifications (e.g., `plan/`, `spec.md`, `scratchpad.md`). You want the LLM to access and update them, but you do **not** want them committed or pushed to GitHub. Keeping them in `.gitignore` protects GitHub, while `CODESCOPE_ALLOW_IGNORED` enables CodeScope access.
+- **Tool Behavior Breakdown:**
+  - **`list_directory_tree`**: Strictly respects `.gitignore` and **strips** these files from the directory tree output. This keeps your repository directory structure clean and uncluttered for READMEs, code audits, and Git.
+  - **`read_file` & `read_multiple_files`**: **Allowed**. The LLM can read `plan/spec.md` or any allowed markdown/planning file without triggering `File is ignored by .gitignore`.
+  - **`search_files`**: **Allowed**. Full-text search and filename search scan allowed files.
+  - **`write_file` & `edit_file`**: **Allowed**. The LLM can edit or update the plan files (exempted from `BLOCK_WRITES_TO_IGNORED`).
+  - **`git_commit` & `git_push`**: **Blocked from Git**. Because the files stay in `.gitignore`, Git ignores them completely, ensuring they are **never committed or pushed to remote repositories**.
+- **Defense-in-Depth / Safety Guarantee:**
+  - Protected files (`.env`, `.env.*`, `.git/`, `id_rsa*`, `*.pem`, `*.key`, `.codescope.toml`) are guarded by `core/safety.py` and can **never** be accessed or bypassed via `CODESCOPE_ALLOW_IGNORED`. Even with wildcards like `CODESCOPE_ALLOW_IGNORED=*`, sensitive secrets remain 100% blocked.
+- **Alternative Project-Level File (`.codescopeallowed`):**
+  - In addition to `.env`, you can place a `.codescopeallowed` (or `.codescopeallow`) file in any project root containing line-separated patterns. (Remember to also add `.codescopeallowed` to your `.gitignore`).
+
 ---
 
 ### 4. Write Operations & Safety Controls
@@ -179,6 +195,7 @@ CodeScope MCP enforces strict boundary validation on all read and write tools to
 - **Default:** `true`
 - **Type:** Boolean (`true` / `false`)
 - **Purpose:** When `true`, write tools refuse to write, edit, delete, or rename files matched by `.gitignore` or built-in patterns (`node_modules/`, `.git/`, `.venv/`, `dist/`, `package-lock.json`, etc.).
+- **Interplay with `CODESCOPE_ALLOW_IGNORED`:** Files explicitly whitelisted in `CODESCOPE_ALLOW_IGNORED` (or `.codescopeallowed`) are exempted from this block, enabling the AI to safely update plans or specifications while continuing to protect vendor directories and lockfiles.
 - **Recommended Values:**
   - **Always `true`**: Protects against accidental corruption of dependencies, virtualenvs, or lockfiles.
 
