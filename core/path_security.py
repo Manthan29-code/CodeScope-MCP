@@ -139,7 +139,23 @@ def resolve_and_verify(
         root_path = verify_read_root(root_path)
 
     # Clean relative path string
-    rel_clean = relative_path.strip().lstrip("/\\") if relative_path else ""
+    rel_clean = relative_path.strip().replace("\\", "/").lstrip("/") if relative_path else ""
+
+    # Symlink check if symlinks are disallowed: inspect path components under root_path
+    if not config.ALLOW_SYMLINKS:
+        if root_path.is_symlink():
+            raise PermissionError(f"Security Error: Symlinks are disallowed by configuration: '{root_path}'")
+        if rel_clean:
+            accum = root_path
+            for comp in [p for p in rel_clean.split("/") if p]:
+                if comp in (".", ".."):
+                    continue
+                accum = accum / comp
+                if accum.is_symlink():
+                    raise PermissionError(
+                        f"Security Error: Symlinks are disallowed by configuration: '{relative_path}'"
+                    )
+
     target_path = (root_path / rel_clean).resolve()
 
     # Verify path containment
@@ -153,14 +169,6 @@ def resolve_and_verify(
         raise ValueError(
             f"Security Error: Access denied. Path '{relative_path}' escapes project root '{root_path}'."
         )
-
-    # Symlink check if symlinks are disallowed
-    if not config.ALLOW_SYMLINKS:
-        check_path = Path(root_path / rel_clean)
-        if check_path.is_symlink():
-            raise PermissionError(
-                f"Security Error: Symlinks are disallowed by configuration: '{relative_path}'"
-            )
 
     return target_path
 
@@ -212,12 +220,26 @@ def resolve_for_write(
                 f"Invalid path component '{comp}': Trailing dots and trailing spaces are disallowed."
             )
 
-    clean_raw = relative_path.strip()
+    clean_raw = "/".join(raw_components)
     if clean_raw in (".", "./", ".\\", "/", "\\"):
         raise ValueError("Target path cannot be the project root directory.")
 
-    if os.path.isabs(clean_raw) or re.match(r"^[a-zA-Z]:", clean_raw):
+    if os.path.isabs(str(relative_path).strip()) or re.match(r"^[a-zA-Z]:", str(relative_path).strip()):
         raise ValueError(f"Target path must be a relative path, got absolute path: '{relative_path}'")
+
+    # Enforce symlink policy if disallowed: check the path components before resolving
+    if not config.ALLOW_SYMLINKS:
+        if root_path.is_symlink():
+            raise PermissionError(f"Security Error: Symlinks are disallowed by configuration: '{root_path}'")
+        accum = root_path
+        for comp in raw_components:
+            if comp in (".", ".."):
+                continue
+            accum = accum / comp
+            if accum.is_symlink():
+                raise PermissionError(
+                    f"Security Error: Symlinks are disallowed by configuration: '{relative_path}'"
+                )
 
     target_path = (root_path / clean_raw).resolve()
 

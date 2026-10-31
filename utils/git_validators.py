@@ -40,7 +40,8 @@ def to_repo_relative(root: Path, user_path: str) -> str:
     if not isinstance(user_path, str) or not user_path.strip() or "\x00" in user_path:
         raise ValueError("Invalid path")
     root_resolved = Path(root).resolve()
-    candidate = (root_resolved / user_path).resolve()
+    clean_user = user_path.replace("\\", "/")
+    candidate = (root_resolved / clean_user).resolve()
     try:
         rel = candidate.relative_to(root_resolved)
     except ValueError:
