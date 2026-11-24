@@ -64,6 +64,7 @@ def begin_write(project_path: Union[str, Path]) -> Path:
 
     Returns the resolved Path of project_path.
     """
+    config.reload_if_changed()
     if not config.ENABLE_WRITE_TOOLS:
         raise WriteDisabledError(
             "Write operations are disabled. Set ENABLE_WRITE_TOOLS=true in configuration or .env to enable."

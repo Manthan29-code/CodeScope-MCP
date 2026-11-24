@@ -43,6 +43,7 @@ def verify_read_root(root: Union[str, Path]) -> Path:
         ValueError: If root is empty or does not exist or is not a directory.
         ReadRootNotAllowedError: If root is a filesystem/drive root or not within READ_ALLOWED_ROOTS.
     """
+    config.reload_if_changed()
     if not root or not str(root).strip():
         raise ValueError("project_path must be a non-empty string.")
 

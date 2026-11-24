@@ -2,9 +2,16 @@ import os
 import re
 from pathlib import Path
 from typing import List
-from dotenv import load_dotenv
+from dotenv import load_dotenv, dotenv_values
 
-load_dotenv()
+SERVER_DIR: Path = Path(__file__).resolve().parent
+ENV_PATH: Path = SERVER_DIR / ".env"
+
+load_dotenv(dotenv_path=ENV_PATH, override=True)
+try:
+    _last_env_mtime: float = ENV_PATH.stat().st_mtime if ENV_PATH.is_file() else -1.0
+except OSError:
+    _last_env_mtime = -1.0
 
 # Server Settings
 HOST: str = os.getenv("HOST", "127.0.0.1")
@@ -146,3 +153,106 @@ VERIFY_AUTODETECT: bool = _env_bool("VERIFY_AUTODETECT", True)
 VERIFY_DEFAULT_TIMEOUT_SECONDS: int = _env_int("VERIFY_DEFAULT_TIMEOUT_SECONDS", 300)
 VERIFY_MAX_OUTPUT_CHARS: int = _env_int("VERIFY_MAX_OUTPUT_CHARS", 20000)
 
+
+
+def reload_if_changed() -> bool:
+    """
+    Checks if .env has been modified on disk. If modified, reloads .env
+    with override=True and updates all dynamic configuration variables in memory.
+    Returns True if a reload occurred, False otherwise.
+    Takes ~5 microseconds when file has not changed.
+    """
+    global _last_env_mtime, ALLOWED_PROJECT_ROOTS, READ_ALLOWED_ROOTS, WRITE_ALLOWED_ROOTS
+    global ENABLE_WRITE_TOOLS, MAX_WRITE_SIZE_BYTES, MAX_EDITS_PER_CALL, MAX_DIFF_CHARS
+    global BLOCK_WRITES_TO_IGNORED, CODESCOPE_ALLOW_IGNORED, _allow_ignored_raw
+    global MAX_FILES_PER_REPLACE, REGEX_TIMEOUT_SECONDS, MAX_REGEX_PATTERN_LENGTH
+    global ENABLE_GIT_TOOLS, GIT_CONFIRM_MODE, GIT_CONFIRM_TTL_SECONDS
+    global GIT_COMMAND_TIMEOUT_SECONDS, GIT_MAX_DIFF_LINES
+    global ENABLE_VERIFICATION_TOOLS, VERIFY_CONFIG_FILENAME, VERIFY_AUTODETECT
+    global VERIFY_DEFAULT_TIMEOUT_SECONDS, VERIFY_MAX_OUTPUT_CHARS
+
+    try:
+        if not ENV_PATH.is_file():
+            return False
+        mtime = ENV_PATH.stat().st_mtime
+    except OSError:
+        return False
+
+    if mtime <= _last_env_mtime:
+        return False
+
+    load_dotenv(dotenv_path=ENV_PATH, override=True)
+    _last_env_mtime = mtime
+
+    vals = dotenv_values(dotenv_path=ENV_PATH)
+    for k, v in vals.items():
+        if v is not None:
+            os.environ[k] = v
+
+    # Project Roots & Access Control (SEC-002)
+    _central_roots_raw = vals.get("ALLOWED_PROJECT_ROOTS", os.getenv("ALLOWED_PROJECT_ROOTS", "")).strip()
+    ALLOWED_PROJECT_ROOTS = _parse_roots(_central_roots_raw)
+
+    if "READ_ALLOWED_ROOTS" in vals:
+        _read_roots_raw = (vals["READ_ALLOWED_ROOTS"] or "").strip()
+        READ_ALLOWED_ROOTS = _parse_roots(_read_roots_raw)
+    elif ALLOWED_PROJECT_ROOTS:
+        READ_ALLOWED_ROOTS = list(ALLOWED_PROJECT_ROOTS)
+    else:
+        _read_roots_raw = os.getenv("READ_ALLOWED_ROOTS", "").strip()
+        READ_ALLOWED_ROOTS = _parse_roots(_read_roots_raw) if _read_roots_raw else []
+
+    # Write Operations Settings
+    if "ENABLE_WRITE_TOOLS" in vals:
+        ENABLE_WRITE_TOOLS = (vals["ENABLE_WRITE_TOOLS"] or "false").lower() in ("true", "1", "yes")
+    else:
+        ENABLE_WRITE_TOOLS = os.getenv("ENABLE_WRITE_TOOLS", "false").lower() in ("true", "1", "yes")
+
+    if "WRITE_ALLOWED_ROOTS" in vals:
+        _allowed_roots_raw = (vals["WRITE_ALLOWED_ROOTS"] or "").strip()
+        WRITE_ALLOWED_ROOTS = _parse_roots(_allowed_roots_raw)
+    elif ALLOWED_PROJECT_ROOTS:
+        WRITE_ALLOWED_ROOTS = list(ALLOWED_PROJECT_ROOTS)
+    else:
+        _allowed_roots_raw = os.getenv("WRITE_ALLOWED_ROOTS", "").strip()
+        WRITE_ALLOWED_ROOTS = _parse_roots(_allowed_roots_raw) if _allowed_roots_raw else []
+
+    _allow_ignored_raw = os.getenv("CODESCOPE_ALLOW_IGNORED", "").strip()
+    CODESCOPE_ALLOW_IGNORED = [
+        p.strip() for p in re.split(r"[,;]", _allow_ignored_raw) if p.strip()
+    ] if _allow_ignored_raw else []
+
+    BLOCK_WRITES_TO_IGNORED = os.getenv("BLOCK_WRITES_TO_IGNORED", "true").lower() in ("true", "1", "yes")
+    MAX_WRITE_SIZE_BYTES = int(os.getenv("MAX_WRITE_SIZE_BYTES", "1000000"))
+    MAX_EDITS_PER_CALL = int(os.getenv("MAX_EDITS_PER_CALL", "50"))
+    MAX_DIFF_CHARS = int(os.getenv("MAX_DIFF_CHARS", "20000"))
+    MAX_FILES_PER_REPLACE = int(os.getenv("MAX_FILES_PER_REPLACE", "100"))
+    REGEX_TIMEOUT_SECONDS = float(os.getenv("REGEX_TIMEOUT_SECONDS", "2.0"))
+    MAX_REGEX_PATTERN_LENGTH = int(os.getenv("MAX_REGEX_PATTERN_LENGTH", "500"))
+
+    ENABLE_GIT_TOOLS = _env_bool("ENABLE_GIT_TOOLS", False)
+    _git_mode = os.getenv("GIT_CONFIRM_MODE", "auto").strip().lower()
+    GIT_CONFIRM_MODE = _git_mode if _git_mode in {"auto", "elicit", "code"} else "auto"
+    GIT_CONFIRM_TTL_SECONDS = _env_int("GIT_CONFIRM_TTL_SECONDS", 300)
+    GIT_COMMAND_TIMEOUT_SECONDS = _env_int("GIT_COMMAND_TIMEOUT_SECONDS", 30)
+    GIT_MAX_DIFF_LINES = _env_int("GIT_MAX_DIFF_LINES", 2000)
+
+    ENABLE_VERIFICATION_TOOLS = _env_bool("ENABLE_VERIFICATION_TOOLS", False)
+    VERIFY_CONFIG_FILENAME = os.getenv("VERIFY_CONFIG_FILENAME", ".codescope.toml")
+    VERIFY_AUTODETECT = _env_bool("VERIFY_AUTODETECT", True)
+    VERIFY_DEFAULT_TIMEOUT_SECONDS = _env_int("VERIFY_DEFAULT_TIMEOUT_SECONDS", 300)
+    VERIFY_MAX_OUTPUT_CHARS = _env_int("VERIFY_MAX_OUTPUT_CHARS", 20000)
+
+    try:
+        from core import ignore_manager
+        ignore_manager.clear_cache()
+    except Exception:
+        pass
+
+    try:
+        from utils.logger import logger
+        logger.info(f"Hot-reloaded .env: READ_ALLOWED_ROOTS={READ_ALLOWED_ROOTS}, WRITE_ALLOWED_ROOTS={WRITE_ALLOWED_ROOTS}")
+    except Exception:
+        pass
+
+    return True

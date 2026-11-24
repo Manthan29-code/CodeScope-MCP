@@ -148,6 +148,8 @@ def handle_tool_errors(tool_name: Optional[str] = None):
         @functools.wraps(fn)
         async def async_wrapper(*args, **kwargs):
             try:
+                import config
+                config.reload_if_changed()
                 return await fn(*args, **kwargs)
             except Exception as exc:
                 _log_tool_exception(name, exc, kwargs)
@@ -156,6 +158,8 @@ def handle_tool_errors(tool_name: Optional[str] = None):
         @functools.wraps(fn)
         def sync_wrapper(*args, **kwargs):
             try:
+                import config
+                config.reload_if_changed()
                 return fn(*args, **kwargs)
             except Exception as exc:
                 _log_tool_exception(name, exc, kwargs)
