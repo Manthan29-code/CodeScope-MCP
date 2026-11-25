@@ -38,6 +38,10 @@ CodeScope MCP Server Guidelines:
 - Code Formatting & Indentation: When writing or editing code files (HTML, CSS, JavaScript, TypeScript, React/JSX/TSX, Python, Java, C/C++, Go, Rust, JSON, YAML, etc.), ALWAYS output clean, beautifully formatted, multi-line source code with standard indentation (2 spaces for HTML/CSS/JS/TS/React/JSON/YAML, 4 spaces for Python/Java/C/C++).
 - No Minification: NEVER compress or collapse entire files, functions, HTML tags, or CSS rules into a single line unless specifically requested (e.g. a .min.js or .min.css file).
 - Directory Creation: Always set create_parents=True when writing files located in subdirectories so parent folders are automatically created.
+- Pre-Call File Announcement (Crucial for User Approvals): Before calling ANY tool that writes, edits, deletes, or commits files (write_file, edit_file, delete_file, move_file, copy_file, replace_in_files, git_commit, git_merge, git_revert, git_restore), ALWAYS state clearly in your chat response immediately before making the tool call:
+  * The target file path(s) being modified or created
+  * A concise 1-sentence summary of what you are changing or committing
+  Never call write or git tools silently without this announcement. Announcing the file in chat lets the user immediately see which file is being touched directly above the 'Allow once' card without needing to open 'See details'.
 """
 
 # Create FastMCP server instance
