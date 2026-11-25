@@ -39,6 +39,12 @@ def format_tool_error(exc: Exception, tool_name: str = "") -> Dict[str, Any]:
     elif "writedisablederror" in exc_type.lower() or "write operations are disabled" in msg.lower():
         error_type = "WriteDisabledError"
         hint = "Write operations are disabled on the server. Set ENABLE_WRITE_TOOLS=true in the server configuration to enable file modifications."
+    elif "gitdisablederror" in exc_type.lower() or "git operations are disabled" in msg.lower():
+        error_type = "GitDisabledError"
+        hint = "Git operations are disabled on the server. Set ENABLE_GIT_TOOLS=true in .env to enable."
+    elif "verificationdisablederror" in exc_type.lower() or "verification tools are disabled" in msg.lower():
+        error_type = "VerificationDisabledError"
+        hint = "Automated verification tools are disabled on the server. Set ENABLE_VERIFICATION_TOOLS=true in .env to enable."
     elif "binaryfileerror" in exc_type.lower() or "binary file" in msg.lower() or "null bytes" in msg.lower():
         error_type = "BinaryFileError"
         hint = "Cannot perform text operations on binary files. CodeScope text tools only operate on valid text files."
@@ -99,8 +105,10 @@ def format_tool_error(exc: Exception, tool_name: str = "") -> Dict[str, Any]:
 
 _EXPECTED_ERROR_NAMES = {
     "GitError",
+    "GitDisabledError",
     "ApprovalError",
     "VerificationError",
+    "VerificationDisabledError",
     "ValueError",
     "PermissionError",
     "ReadRootNotAllowedError",

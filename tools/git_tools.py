@@ -12,7 +12,7 @@ from core.path_security import ReadRootNotAllowedError, verify_read_root
 from core.safety import ProtectedPathError
 from core.write_guard import RootNotAllowedError, WriteDisabledError, WriteError, begin_write
 from services.confirmation_service import ApprovalError, ApprovalGate
-from services.git_service import GitError, GitService
+from services.git_service import GitDisabledError, GitError, GitService
 from utils.process_runner import ExecutableNotFound
 
 audit = logging.getLogger("codescope.audit")
@@ -32,6 +32,12 @@ def _get_git_service(
     default_git: Optional[GitService] = None,
 ) -> GitService:
     """Resolve and validate project_path against security roots, returning a GitService for it."""
+    config.reload_if_changed()
+    if not config.ENABLE_GIT_TOOLS:
+        raise GitDisabledError(
+            "Git operations are disabled on the server. Set ENABLE_GIT_TOOLS=true in .env to enable."
+        )
+
     if for_write:
         target_root = begin_write(project_path)
     else:
@@ -52,7 +58,7 @@ def _get_git_service(
     )
 
 
-def register_git_tools(mcp: FastMCP, git: GitService, gate: ApprovalGate, *, enable_write_tools: bool) -> None:
+def register_git_tools(mcp: FastMCP, git: GitService, gate: ApprovalGate, *, enable_write_tools: bool = True) -> None:
 
     # ------------------------------------------------------------ READ (no approval)
     @mcp.tool(annotations=READ_ONLY)
@@ -138,9 +144,6 @@ def register_git_tools(mcp: FastMCP, git: GitService, gate: ApprovalGate, *, ena
     async def git_branches(project_path: str = ".") -> dict:
         """Alias for git_branch_list. List local branches in target repository."""
         return await git_branch_list(project_path=project_path)
-
-    if not enable_write_tools:
-        return
 
     # ------------------------------------------------------------ LOW_WRITE (no approval)
     @mcp.tool(annotations=LOW_WRITE)

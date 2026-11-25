@@ -2,170 +2,20 @@ import asyncio
 import importlib
 import pytest
 import config
+from core.write_guard import WriteDisabledError
+from services.git_service import GitDisabledError
+from services.verification_service import VerificationDisabledError
+from tools.write_file_tool import write_file
+from tools.git_tools import _get_git_service
+from tools.verify_tools import _get_verification_service
+from tools.file_metadata_tool import get_file_metadata
 
 
-def test_server_registration_gate_off(monkeypatch):
-    monkeypatch.setattr(config, "ENABLE_WRITE_TOOLS", False)
-    monkeypatch.setattr(config, "ENABLE_GIT_TOOLS", False)
-    monkeypatch.setattr(config, "ENABLE_VERIFICATION_TOOLS", False)
+def test_server_all_tools_registered():
     import server
     importlib.reload(server)
 
-    from fastmcp import Client
-
-    async def _get_tools():
-        async with Client(server.mcp) as client:
-            return await client.list_tools()
-
-    tools = asyncio.run(_get_tools())
-    names = {t.name for t in tools}
-
-    expected_read_tools = {
-        "list_directory_tree",
-        "get_file_metadata",
-        "read_file",
-        "read_multiple_files",
-        "search_files",
-    }
-    assert names == expected_read_tools
-
-
-def test_server_registration_gate_on(monkeypatch):
-    monkeypatch.setattr(config, "ENABLE_WRITE_TOOLS", True)
-    monkeypatch.setattr(config, "ENABLE_GIT_TOOLS", False)
-    monkeypatch.setattr(config, "ENABLE_VERIFICATION_TOOLS", False)
-    monkeypatch.setattr(config, "WRITE_ALLOWED_ROOTS", ["/dummy/allowed"])
-    import server
-    importlib.reload(server)
-
-    from fastmcp import Client
-
-    async def _get_tools():
-        async with Client(server.mcp) as client:
-            return await client.list_tools()
-
-    tools = asyncio.run(_get_tools())
-    names = {t.name for t in tools}
-
-    expected_all_tools = {
-        "list_directory_tree",
-        "get_file_metadata",
-        "read_file",
-        "read_multiple_files",
-        "search_files",
-        "write_file",
-        "edit_file",
-        "delete_file",
-        "move_file",
-        "copy_file",
-        "replace_in_files",
-    }
-    assert names == expected_all_tools
-
-
-def test_server_registration_git_read_only(monkeypatch):
-    monkeypatch.setattr(config, "ENABLE_GIT_TOOLS", True)
-    monkeypatch.setattr(config, "ENABLE_WRITE_TOOLS", False)
-    monkeypatch.setattr(config, "ENABLE_VERIFICATION_TOOLS", False)
-    import server
-    importlib.reload(server)
-
-    from fastmcp import Client
-
-    async def _get_tools():
-        async with Client(server.mcp) as client:
-            return await client.list_tools()
-
-    tools = asyncio.run(_get_tools())
-    names = {t.name for t in tools}
-
-    git_read_tools = {
-        "git_status",
-        "git_diff",
-        "git_log",
-        "git_show",
-        "git_branch_list",
-    }
-    assert git_read_tools.issubset(names)
-    assert "git_branch_create" not in names
-    assert "git_merge" not in names
-    assert "git_commit" not in names
-    assert "git_push" not in names
-
-
-def test_server_registration_git_with_write(monkeypatch):
-    monkeypatch.setattr(config, "ENABLE_GIT_TOOLS", True)
-    monkeypatch.setattr(config, "ENABLE_WRITE_TOOLS", True)
-    monkeypatch.setattr(config, "ENABLE_VERIFICATION_TOOLS", False)
-    monkeypatch.setattr(config, "WRITE_ALLOWED_ROOTS", ["/dummy/allowed"])
-    import server
-    importlib.reload(server)
-
-    from fastmcp import Client
-
-    async def _get_tools():
-        async with Client(server.mcp) as client:
-            return await client.list_tools()
-
-    tools = asyncio.run(_get_tools())
-    names = {t.name for t in tools}
-
-    all_git_tools = {
-        "git_status",
-        "git_diff",
-        "git_log",
-        "git_show",
-        "git_branch_list",
-        "git_branch_create",
-        "git_switch",
-        "git_merge",
-        "git_revert",
-        "git_restore",
-        "git_commit",
-        "git_push",
-        "confirm_action",
-    }
-    assert all_git_tools.issubset(names)
-
-
-def test_server_registration_verification_tools(monkeypatch):
-    monkeypatch.setattr(config, "ENABLE_VERIFICATION_TOOLS", True)
-    monkeypatch.setattr(config, "ENABLE_GIT_TOOLS", False)
-    monkeypatch.setattr(config, "ENABLE_WRITE_TOOLS", False)
-    import server
-    importlib.reload(server)
-
-    from fastmcp import Client
-
-    async def _get_tools():
-        async with Client(server.mcp) as client:
-            return await client.list_tools()
-
-    tools = asyncio.run(_get_tools())
-    names = {t.name for t in tools}
-
-    verify_tools = {"list_checks", "run_check", "run_all_checks"}
-    assert verify_tools.issubset(names)
-    assert "git_status" not in names
-    assert "write_file" not in names
-
-
-def test_server_registration_all_enabled(monkeypatch):
-    monkeypatch.setattr(config, "ENABLE_WRITE_TOOLS", True)
-    monkeypatch.setattr(config, "ENABLE_GIT_TOOLS", True)
-    monkeypatch.setattr(config, "ENABLE_VERIFICATION_TOOLS", True)
-    monkeypatch.setattr(config, "WRITE_ALLOWED_ROOTS", ["/dummy/allowed"])
-    import server
-    importlib.reload(server)
-
-    from fastmcp import Client
-
-    async def _get_tools():
-        async with Client(server.mcp) as client:
-            return await client.list_tools()
-
-    tools = asyncio.run(_get_tools())
-    names = {t.name for t in tools}
+    comp_names = {getattr(c, "name", "") for c in server.mcp._local_provider._components.values() if hasattr(c, "name")}
 
     expected_read = {
         "list_directory_tree",
@@ -188,12 +38,8 @@ def test_server_registration_all_enabled(monkeypatch):
         "git_log",
         "git_show",
         "git_branch_list",
-        "git_list_branches",
-        "git_branches",
         "git_branch_create",
-        "git_create_branch",
         "git_switch",
-        "git_checkout",
         "git_merge",
         "git_revert",
         "git_restore",
@@ -206,4 +52,78 @@ def test_server_registration_all_enabled(monkeypatch):
         "run_check",
         "run_all_checks",
     }
-    assert names == (expected_read | expected_write | expected_git | expected_verify)
+
+    assert expected_read.issubset(comp_names)
+    assert expected_write.issubset(comp_names)
+    assert expected_git.issubset(comp_names)
+    assert expected_verify.issubset(comp_names)
+
+
+def test_server_tool_annotations():
+    import server
+    importlib.reload(server)
+
+    comps = {getattr(c, "name", ""): c for c in server.mcp._local_provider._components.values() if hasattr(c, "name")}
+
+    # Read tools must advertise readOnlyHint=True, destructiveHint=False
+    for name in ["read_file", "search_files", "list_directory_tree", "get_file_metadata"]:
+        ann = getattr(comps[name], "annotations", None)
+        assert ann is not None, f"Tool '{name}' must have annotations"
+        assert getattr(ann, "readOnlyHint", None) is True
+        assert getattr(ann, "destructiveHint", None) is False
+
+    # Write tools must advertise readOnlyHint=False, destructiveHint=True
+    for name in ["write_file", "edit_file", "delete_file", "move_file", "replace_in_files"]:
+        ann = getattr(comps[name], "annotations", None)
+        assert ann is not None, f"Tool '{name}' must have annotations"
+        assert getattr(ann, "readOnlyHint", None) is False
+        assert getattr(ann, "destructiveHint", None) is True
+
+    # Destructive git tools must advertise destructiveHint=True
+    for name in ["git_commit", "git_push", "git_merge", "git_restore", "git_revert"]:
+        ann = getattr(comps[name], "annotations", None)
+        assert ann is not None, f"Tool '{name}' must have annotations"
+        assert getattr(ann, "readOnlyHint", None) is False
+        assert getattr(ann, "destructiveHint", None) is True
+
+
+def test_runtime_gate_write_disabled(monkeypatch, tmp_path):
+    monkeypatch.setattr(config, "ENABLE_WRITE_TOOLS", False)
+    monkeypatch.setattr(config, "WRITE_ALLOWED_ROOTS", [str(tmp_path)])
+
+    res = write_file("test.txt", "content", project_path=str(tmp_path))
+    assert res["ok"] is False
+    assert res.get("error_type") == "WriteDisabledError" or "disabled" in str(res.get("error")).lower()
+
+
+def test_runtime_gate_git_disabled(monkeypatch, tmp_path):
+    monkeypatch.setattr(config, "ENABLE_GIT_TOOLS", False)
+    monkeypatch.setattr(config, "READ_ALLOWED_ROOTS", [str(tmp_path)])
+
+    with pytest.raises(GitDisabledError, match="Git operations are disabled"):
+        _get_git_service(str(tmp_path), for_write=False)
+
+
+def test_runtime_gate_verification_disabled(monkeypatch, tmp_path):
+    monkeypatch.setattr(config, "ENABLE_VERIFICATION_TOOLS", False)
+    monkeypatch.setattr(config, "READ_ALLOWED_ROOTS", [str(tmp_path)])
+
+    with pytest.raises(VerificationDisabledError, match="Automated verification tools are disabled"):
+        _get_verification_service(str(tmp_path))
+
+
+def test_get_file_metadata_error_handling(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "READ_ALLOWED_ROOTS", [str(tmp_path)])
+
+    # Non-existent file
+    res = get_file_metadata("does_not_exist.txt", project_path=str(tmp_path))
+    assert isinstance(res, dict)
+    assert res["ok"] is False
+    assert "File not found" in res["error"]
+    assert res["error_type"] == "PathNotFoundError"
+
+    # Empty file_path
+    res_empty = get_file_metadata("", project_path=str(tmp_path))
+    assert isinstance(res_empty, dict)
+    assert res_empty["ok"] is False
+    assert res_empty["error_type"] in ("InvalidInputError", "PathNotFoundError")

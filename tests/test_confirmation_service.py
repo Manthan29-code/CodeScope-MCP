@@ -63,11 +63,20 @@ def test_fingerprint_mismatch_cancels():
         svc.consume(action.action_id, action.code, "fp1")
 
 
-def test_gate_code_fallback():
+def _run_coro(coro):
+    """Run a coroutine that completes synchronously without spawning socketpair."""
+    try:
+        coro.send(None)
+    except StopIteration as e:
+        return e.value
     import asyncio
+    return asyncio.run(coro)
+
+
+def test_gate_code_fallback():
     svc = ConfirmationService(ttl_seconds=60)
     gate = ApprovalGate(svc, mode="code")
-    outcome = asyncio.run(
+    outcome = _run_coro(
         gate.gate(
             None,
             tool="git_merge",
@@ -85,3 +94,38 @@ def test_gate_code_fallback():
     # Ensure approval code is NOT in payload
     assert "code" not in outcome.payload
     assert svc.peek(outcome.payload["action_id"]).code not in str(outcome.payload)
+
+
+def test_gate_direct_mode():
+    svc = ConfirmationService(ttl_seconds=60)
+    gate = ApprovalGate(svc, mode="direct")
+    outcome = _run_coro(
+        gate.gate(
+            None,
+            tool="git_commit",
+            args={"message": "feat: test"},
+            summary="commit feat",
+            preview="preview diff",
+            fingerprint="fp1",
+        )
+    )
+    assert outcome.status == "approved"
+    assert outcome.payload is None
+
+
+def test_gate_dynamic_config_mode(monkeypatch):
+    import config
+    monkeypatch.setattr(config, "GIT_CONFIRM_MODE", "direct")
+    svc = ConfirmationService(ttl_seconds=60)
+    gate = ApprovalGate(svc)  # default uses config.GIT_CONFIRM_MODE
+    outcome = _run_coro(
+        gate.gate(
+            None,
+            tool="git_commit",
+            args={"message": "feat: test"},
+            summary="commit feat",
+            preview="preview diff",
+            fingerprint="fp1",
+        )
+    )
+    assert outcome.status == "approved"

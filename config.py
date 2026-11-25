@@ -140,7 +140,7 @@ MAX_REGEX_PATTERN_LENGTH: int = int(os.getenv("MAX_REGEX_PATTERN_LENGTH", "500")
 # Git Integration Settings
 ENABLE_GIT_TOOLS: bool = _env_bool("ENABLE_GIT_TOOLS", False)
 GIT_CONFIRM_MODE: str = os.getenv("GIT_CONFIRM_MODE", "auto").strip().lower()
-if GIT_CONFIRM_MODE not in {"auto", "elicit", "code"}:
+if GIT_CONFIRM_MODE not in {"auto", "elicit", "code", "direct"}:
     GIT_CONFIRM_MODE = "auto"
 GIT_CONFIRM_TTL_SECONDS: int = _env_int("GIT_CONFIRM_TTL_SECONDS", 300)
 GIT_COMMAND_TIMEOUT_SECONDS: int = _env_int("GIT_COMMAND_TIMEOUT_SECONDS", 30)
@@ -229,10 +229,13 @@ def reload_if_changed() -> bool:
     MAX_FILES_PER_REPLACE = int(os.getenv("MAX_FILES_PER_REPLACE", "100"))
     REGEX_TIMEOUT_SECONDS = float(os.getenv("REGEX_TIMEOUT_SECONDS", "2.0"))
     MAX_REGEX_PATTERN_LENGTH = int(os.getenv("MAX_REGEX_PATTERN_LENGTH", "500"))
+    MAX_FILE_SIZE_BYTES = int(os.getenv("MAX_FILE_SIZE_BYTES", str(10 * 1024 * 1024)))
+    MAX_LINES_PER_READ = int(os.getenv("MAX_LINES_PER_READ", "1000"))
+    ALLOW_SYMLINKS = os.getenv("ALLOW_SYMLINKS", "false").lower() in ("true", "1", "yes")
 
     ENABLE_GIT_TOOLS = _env_bool("ENABLE_GIT_TOOLS", False)
     _git_mode = os.getenv("GIT_CONFIRM_MODE", "auto").strip().lower()
-    GIT_CONFIRM_MODE = _git_mode if _git_mode in {"auto", "elicit", "code"} else "auto"
+    GIT_CONFIRM_MODE = _git_mode if _git_mode in {"auto", "elicit", "code", "direct"} else "auto"
     GIT_CONFIRM_TTL_SECONDS = _env_int("GIT_CONFIRM_TTL_SECONDS", 300)
     GIT_COMMAND_TIMEOUT_SECONDS = _env_int("GIT_COMMAND_TIMEOUT_SECONDS", 30)
     GIT_MAX_DIFF_LINES = _env_int("GIT_MAX_DIFF_LINES", 2000)

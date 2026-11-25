@@ -24,6 +24,11 @@ class VerificationError(RuntimeError):
     pass
 
 
+class VerificationDisabledError(VerificationError):
+    """Raised when verification tools are disabled in configuration."""
+    pass
+
+
 class VerificationService:
     def __init__(self, project_root, *, config_filename: str = ".codescope.toml", autodetect: bool = True,
                  default_timeout: int = 300, max_output_chars: int = 20000):

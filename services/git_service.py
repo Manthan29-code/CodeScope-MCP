@@ -22,6 +22,11 @@ class GitError(RuntimeError):
     pass
 
 
+class GitDisabledError(GitError):
+    """Raised when git operations are disabled in configuration."""
+    pass
+
+
 def parse_status_v2(raw: str) -> GitStatus:
     """Parse `git status --porcelain=v2 --branch -z`."""
     tokens = raw.split("\0")

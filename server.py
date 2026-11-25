@@ -1,11 +1,21 @@
 from fastmcp import FastMCP
+from fastmcp.tools.base import Tool
 import config
 from utils.logger import logger
-from tools.list_directory_tool import list_directory_tree
-from tools.file_metadata_tool import get_file_metadata
-from tools.read_file_tool import read_file
-from tools.read_multiple_files_tool import read_multiple_files
-from tools.search_files_tool import search_files
+
+from tools import (
+    list_directory_tool,
+    file_metadata_tool,
+    read_file_tool,
+    read_multiple_files_tool,
+    search_files_tool,
+    write_file_tool,
+    edit_file_tool,
+    delete_file_tool,
+    move_file_tool,
+    copy_file_tool,
+    replace_in_files_tool,
+)
 
 SERVER_INSTRUCTIONS = """
 CodeScope MCP Server Guidelines:
@@ -33,12 +43,12 @@ CodeScope MCP Server Guidelines:
 # Create FastMCP server instance
 mcp = FastMCP("CodeScope", instructions=SERVER_INSTRUCTIONS)
 
-# Register Read Tools (always available)
-mcp.add_tool(list_directory_tree)
-mcp.add_tool(get_file_metadata)
-mcp.add_tool(read_file)
-mcp.add_tool(read_multiple_files)
-mcp.add_tool(search_files)
+# Register Read Tools (with MCP security annotations)
+mcp.add_tool(Tool.from_function(list_directory_tool.list_directory_tree, annotations=list_directory_tool.annotations))
+mcp.add_tool(Tool.from_function(file_metadata_tool.get_file_metadata, annotations=file_metadata_tool.annotations))
+mcp.add_tool(Tool.from_function(read_file_tool.read_file, annotations=read_file_tool.annotations))
+mcp.add_tool(Tool.from_function(read_multiple_files_tool.read_multiple_files, annotations=read_multiple_files_tool.annotations))
+mcp.add_tool(Tool.from_function(search_files_tool.search_files, annotations=search_files_tool.annotations))
 
 if not config.READ_ALLOWED_ROOTS:
     logger.warning(
@@ -49,65 +59,50 @@ else:
         f"Read tools initialized with allowed roots: {config.READ_ALLOWED_ROOTS}"
     )
 
-# Conditionally Register Write Tools (Parts 3 & 4)
-if config.ENABLE_WRITE_TOOLS:
-    from tools.write_file_tool import write_file
-    from tools.edit_file_tool import edit_file
-    from tools.delete_file_tool import delete_file
-    from tools.move_file_tool import move_file
-    from tools.copy_file_tool import copy_file
-    from tools.replace_in_files_tool import replace_in_files
+# Register Write Tools (always registered with annotations; guarded at runtime by write_guard.begin_write)
+mcp.add_tool(Tool.from_function(write_file_tool.write_file, annotations=write_file_tool.annotations))
+mcp.add_tool(Tool.from_function(edit_file_tool.edit_file, annotations=edit_file_tool.annotations))
+mcp.add_tool(Tool.from_function(delete_file_tool.delete_file, annotations=delete_file_tool.annotations))
+mcp.add_tool(Tool.from_function(move_file_tool.move_file, annotations=move_file_tool.annotations))
+mcp.add_tool(Tool.from_function(copy_file_tool.copy_file, annotations=copy_file_tool.annotations))
+mcp.add_tool(Tool.from_function(replace_in_files_tool.replace_in_files, annotations=replace_in_files_tool.annotations))
 
-    mcp.add_tool(write_file)
-    mcp.add_tool(edit_file)
-    mcp.add_tool(delete_file)
-    mcp.add_tool(move_file)
-    mcp.add_tool(copy_file)
-    mcp.add_tool(replace_in_files)
-
-    if not config.WRITE_ALLOWED_ROOTS:
-        logger.warning(
-            "Write tools are ENABLED, but WRITE_ALLOWED_ROOTS is empty. "
-            "All write operations will be refused until allowed roots are configured."
-        )
-    else:
-        logger.warning(
-            f"Write tools are ENABLED with allowed roots: {config.WRITE_ALLOWED_ROOTS}"
-        )
-    logger.info(
-        "Registered write tools: write_file, edit_file, delete_file, move_file, copy_file, replace_in_files."
+if not config.WRITE_ALLOWED_ROOTS:
+    logger.warning(
+        "Write tools registered, but WRITE_ALLOWED_ROOTS is empty. "
+        "All write operations will be refused until allowed roots are configured."
     )
 else:
-    logger.info("Write tools are disabled (ENABLE_WRITE_TOOLS=false).")
-
-# Conditionally Register Git Integration Tools
-if config.ENABLE_GIT_TOOLS:
-    from services.confirmation_service import ApprovalGate, ConfirmationService
-    from services.git_service import GitService
-    from tools.git_tools import register_git_tools
-
-    git_service = GitService(
-        config.PROJECT_ROOT,
-        timeout=config.GIT_COMMAND_TIMEOUT_SECONDS,
-        max_diff_lines=config.GIT_MAX_DIFF_LINES,
-        block_ignored=config.BLOCK_WRITES_TO_IGNORED,
+    logger.info(
+        f"Write tools registered with allowed roots: {config.WRITE_ALLOWED_ROOTS}"
     )
-    gate = ApprovalGate(ConfirmationService(config.GIT_CONFIRM_TTL_SECONDS), mode=config.GIT_CONFIRM_MODE)
-    register_git_tools(mcp, git_service, gate, enable_write_tools=config.ENABLE_WRITE_TOOLS)
-    logger.info(f"Registered Git tools (write_enabled={config.ENABLE_WRITE_TOOLS}).")
 
-# Conditionally Register Automated Verification Tools
-if config.ENABLE_VERIFICATION_TOOLS:
-    from services.verification_service import VerificationService
-    from tools.verify_tools import register_verify_tools
+# Register Git Integration Tools (always registered; guarded at runtime by _get_git_service)
+from services.confirmation_service import ApprovalGate, ConfirmationService
+from services.git_service import GitService
+from tools.git_tools import register_git_tools
 
-    verifier = VerificationService(
-        config.PROJECT_ROOT,
-        config_filename=config.VERIFY_CONFIG_FILENAME,
-        autodetect=config.VERIFY_AUTODETECT,
-        default_timeout=config.VERIFY_DEFAULT_TIMEOUT_SECONDS,
-        max_output_chars=config.VERIFY_MAX_OUTPUT_CHARS,
-    )
-    register_verify_tools(mcp, verifier)
-    logger.info("Registered Automated Verification tools: list_checks, run_check, run_all_checks.")
+git_service = GitService(
+    config.PROJECT_ROOT,
+    timeout=config.GIT_COMMAND_TIMEOUT_SECONDS,
+    max_diff_lines=config.GIT_MAX_DIFF_LINES,
+    block_ignored=config.BLOCK_WRITES_TO_IGNORED,
+)
+gate = ApprovalGate(ConfirmationService(config.GIT_CONFIRM_TTL_SECONDS))
+register_git_tools(mcp, git_service, gate, enable_write_tools=True)
+logger.info("Registered Git tools (guarded at runtime by ENABLE_GIT_TOOLS).")
+
+# Register Automated Verification Tools (always registered; guarded at runtime by _get_verification_service)
+from services.verification_service import VerificationService
+from tools.verify_tools import register_verify_tools
+
+verifier = VerificationService(
+    config.PROJECT_ROOT,
+    config_filename=config.VERIFY_CONFIG_FILENAME,
+    autodetect=config.VERIFY_AUTODETECT,
+    default_timeout=config.VERIFY_DEFAULT_TIMEOUT_SECONDS,
+    max_output_chars=config.VERIFY_MAX_OUTPUT_CHARS,
+)
+register_verify_tools(mcp, verifier)
+logger.info("Registered Automated Verification tools: list_checks, run_check, run_all_checks.")
 

@@ -1,5 +1,7 @@
+from typing import Any, Dict, Union
 from services.metadata_service import get_metadata
 from models.schemas import FileMetadataOutput
+from utils.error_handler import handle_tool_errors
 
 annotations = {
     "readOnlyHint": True,
@@ -8,11 +10,14 @@ annotations = {
     "openWorldHint": False,
 }
 
+_guard = handle_tool_errors()
 
+
+@_guard
 def get_file_metadata(
     file_path: str,
     project_path: str = "."
-) -> FileMetadataOutput:
+) -> Union[FileMetadataOutput, Dict[str, Any]]:
     """
     Retrieves file metadata (size, last modified time, language, token estimate, binary status)
     without reading full file content into context.

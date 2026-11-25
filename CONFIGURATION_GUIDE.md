@@ -242,9 +242,10 @@ CodeScope MCP enforces strict boundary validation on all read and write tools to
   - Write (if `ENABLE_WRITE_TOOLS=true`): `git_branch_create`, `git_switch`, `git_merge`, `git_revert`, `git_restore`, `git_commit`, `git_push`, `confirm_action`
 
 #### `GIT_CONFIRM_MODE`
-- **Default:** `auto`
-- **Type:** String (`auto` | `elicit` | `code`)
+- **Default:** `direct`
+- **Type:** String (`direct` | `auto` | `elicit` | `code`)
 - **Purpose:** Mechanism for authorizing dangerous actions (`git_merge`, `git_revert`, `git_restore`, `git_commit`, `git_push`).
+  - `direct`: Executes directly upon tool call. Relies on the client UI's native permission dialog (`[Allow once] / [Don't allow]`) in clients like Gemini, ChatGPT, and Cursor.
   - `auto`: Attempts client-side UI elicitation (`ctx.elicit()`) if supported; falls back to console approval code.
   - `elicit`: Requires client UI elicitation (fails if unsupported by client).
   - `code`: Prints a 6-digit one-time code to server console (stderr) only. The user reads and provides it to the model.

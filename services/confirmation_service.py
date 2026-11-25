@@ -100,31 +100,54 @@ class GateOutcome:
 
 
 class ApprovalGate:
-    def __init__(self, service: ConfirmationService, mode: str = "auto"):
+    def __init__(self, service: ConfirmationService, mode: Optional[str] = None):
         self.service = service
-        self.mode = mode if mode in {"auto", "elicit", "code"} else "auto"
+        self._mode = mode.lower() if mode else None
+
+    @property
+    def mode(self) -> str:
+        if self._mode is not None:
+            return self._mode
+        import config
+        return config.GIT_CONFIRM_MODE
 
     async def gate(self, ctx, *, tool: str, args: Dict[str, Any], summary: str,
                    preview: str, fingerprint: str, project_path: str = ".") -> GateOutcome:
+        active_mode = self.mode
+
+        if active_mode == "direct":
+            return GateOutcome("approved")
+
         # Layer 2: ask the human directly through the client, if it supports elicitation.
         # (API shape follows FastMCP 2.x; verify against your installed version.)
-        if self.mode in ("auto", "elicit") and ctx is not None:
+        if active_mode in ("auto", "elicit") and ctx is not None:
+            supports_elicit = False
             try:
-                result = await ctx.elicit(
-                    message=f"{summary}\n\n{preview[:3500]}\n\nApprove this action?",
-                    response_type=None,
-                )
+                session = getattr(ctx, "session", None) or getattr(getattr(ctx, "request_context", None), "session", None)
+                if session and hasattr(session, "_client_params") and session._client_params:
+                    caps = getattr(session._client_params, "capabilities", None)
+                    if caps and getattr(caps, "elicitation", None) is not None:
+                        supports_elicit = True
             except Exception:
-                if self.mode == "elicit":
-                    return GateOutcome("denied", {
-                        "ok": False,
-                        "error": "GIT_CONFIRM_MODE=elicit but this client does not support elicitation.",
-                    })
-                # auto mode: fall through to the approval-code flow
-            else:
-                if getattr(result, "action", "") == "accept":
-                    return GateOutcome("approved")
-                return GateOutcome("denied", {"ok": False, "error": "The user declined this action."})
+                supports_elicit = False
+
+            if supports_elicit or active_mode == "elicit":
+                try:
+                    result = await ctx.elicit(
+                        message=f"{summary}\n\n{preview[:3500]}\n\nApprove this action?",
+                        response_type=None,
+                    )
+                except Exception:
+                    if active_mode == "elicit":
+                        return GateOutcome("denied", {
+                            "ok": False,
+                            "error": "GIT_CONFIRM_MODE=elicit but this client does not support elicitation.",
+                        })
+                    # auto mode: fall through to the approval-code flow
+                else:
+                    if getattr(result, "action", "") == "accept":
+                        return GateOutcome("approved")
+                    return GateOutcome("denied", {"ok": False, "error": "The user declined this action."})
 
         # Layer 3: approval code shown only on the server console.
         action = self.service.create(tool, args, summary, fingerprint, project_path=project_path)

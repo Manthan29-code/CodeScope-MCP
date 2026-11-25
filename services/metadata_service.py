@@ -6,12 +6,14 @@ from models.schemas import FileMetadataOutput
 
 
 def get_metadata(project_path: str, file_path: str) -> FileMetadataOutput:
+    if not file_path or not str(file_path).strip():
+        raise ValueError("file_path cannot be empty.")
     target_path = resolve_and_verify(project_path, file_path)
 
     if not target_path.exists():
-        raise ValueError(f"File not found: {file_path}")
+        raise FileNotFoundError(f"File not found: '{file_path}'")
     if not target_path.is_file():
-        raise ValueError(f"Target path is not a file: {file_path}")
+        raise ValueError(f"Target path is not a file: '{file_path}'")
 
     stat = target_path.stat()
     size_bytes = stat.st_size

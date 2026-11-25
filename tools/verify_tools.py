@@ -8,7 +8,7 @@ from fastmcp import FastMCP
 
 import config
 from core.path_security import ReadRootNotAllowedError, verify_read_root
-from services.verification_service import VerificationError, VerificationService
+from services.verification_service import VerificationDisabledError, VerificationError, VerificationService
 from utils.process_runner import ExecutableNotFound
 
 READ_ONLY = {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
@@ -24,6 +24,12 @@ def _get_verification_service(
     default_verifier: Optional[VerificationService] = None,
 ) -> VerificationService:
     """Resolve and validate project_path against READ_ALLOWED_ROOTS, returning a VerificationService for it."""
+    config.reload_if_changed()
+    if not config.ENABLE_VERIFICATION_TOOLS:
+        raise VerificationDisabledError(
+            "Automated verification tools are disabled on the server. Set ENABLE_VERIFICATION_TOOLS=true in .env to enable."
+        )
+
     target_root = verify_read_root(project_path)
     if default_verifier and target_root == default_verifier.root:
         return default_verifier
