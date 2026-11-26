@@ -145,13 +145,13 @@ def register_git_tools(mcp: FastMCP, git: GitService, gate: ApprovalGate, *, ena
         """Alias for git_branch_list. List local branches in target repository."""
         return await git_branch_list(project_path=project_path)
 
-    # ------------------------------------------------------------ LOW_WRITE (no approval)
-    @mcp.tool(annotations=LOW_WRITE)
+    # ------------------------------------------------------------ BRANCH & SWITCH (requires approval)
+    @mcp.tool(annotations=DESTRUCTIVE)
     @_guard
     async def git_branch_create(name: str, start_point: Optional[str] = None, checkout: bool = False,
                               project_path: str = ".") -> dict:
-        """Create a local branch (optionally switching to it) in target repository. Does not modify any files unless checkout=true.
-        Only execute one Git modification per turn. Announce the branch name and starting point for user review and approval via the client dialog ([Allow once]).
+        """DANGEROUS. Create a local branch (optionally switching to it) in target repository.
+        Only execute one Git modification per turn. Always announce the branch name and starting point for user review and approval via the client dialog ([Allow once]).
         
         Args:
             name: New branch name.
@@ -163,17 +163,18 @@ def register_git_tools(mcp: FastMCP, git: GitService, gate: ApprovalGate, *, ena
         await git_target.ensure_repo()
         return {"ok": True, **(await git_target.create_branch(name, start_point, checkout)).model_dump()}
 
-    @mcp.tool(annotations=LOW_WRITE)
+    @mcp.tool(annotations=DESTRUCTIVE)
     @_guard
     async def git_create_branch(name: str, start_point: Optional[str] = None, checkout: bool = False,
                               project_path: str = ".") -> dict:
-        """Alias for git_branch_create. Create a local branch (optionally switching to it) in target repository."""
+        """Alias for git_branch_create. DANGEROUS. Create a local branch (optionally switching to it) in target repository."""
         return await git_branch_create(name=name, start_point=start_point, checkout=checkout, project_path=project_path)
 
-    @mcp.tool(annotations=LOW_WRITE)
+    @mcp.tool(annotations=DESTRUCTIVE)
     @_guard
     async def git_switch(branch: str, project_path: str = ".") -> dict:
-        """Switch to an existing local branch in target repository. Refuses if tracked files have uncommitted changes.
+        """DANGEROUS. Switch to an existing local branch in target repository. Refuses if tracked files have uncommitted changes.
+        Only execute one Git modification per turn. Always announce the target branch for user review and approval via the client dialog ([Allow once]).
         
         Args:
             branch: Existing branch name to switch to.
@@ -183,10 +184,10 @@ def register_git_tools(mcp: FastMCP, git: GitService, gate: ApprovalGate, *, ena
         await git_target.ensure_repo()
         return {"ok": True, **(await git_target.switch(branch)).model_dump()}
 
-    @mcp.tool(annotations=LOW_WRITE)
+    @mcp.tool(annotations=DESTRUCTIVE)
     @_guard
     async def git_checkout(branch: str, project_path: str = ".") -> dict:
-        """Alias for git_switch. Switch to an existing local branch in target repository."""
+        """Alias for git_switch. DANGEROUS. Switch to an existing local branch in target repository."""
         return await git_switch(branch=branch, project_path=project_path)
 
     # ------------------------------------------------------------ DANGEROUS (approval required)
