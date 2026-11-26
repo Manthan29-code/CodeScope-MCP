@@ -25,6 +25,12 @@ def write_file(
 ) -> dict:
     """
     Creates a new file or completely overwrites an existing file.
+
+    CRITICAL POLICY FOR AI AGENTS:
+    Before calling this tool, you MUST STOP your response, announce the target file_path 
+    and a summary/preview in the chat, and ask for the user's explicit approval:
+    "Do you approve this step? (Reply 'yes' to proceed)".
+    Do NOT invoke this tool in an automated multi-step batch without prior confirmation.
     
     Guidelines for AI Agents:
       - Code Formatting & Indentation: ALWAYS write clean, properly indented, multi-line code with standard newlines (\\n).
