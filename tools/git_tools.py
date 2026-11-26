@@ -152,12 +152,6 @@ def register_git_tools(mcp: FastMCP, git: GitService, gate: ApprovalGate, *, ena
                               project_path: str = ".") -> dict:
         """Create a local branch (optionally switching to it) in target repository. Does not modify any files unless checkout=true.
         
-        CRITICAL POLICY FOR AI AGENTS:
-        Before calling this tool, you MUST STOP your response, announce the target branch name
-        and starting point in the chat, and ask for the user's explicit approval:
-        "Do you approve this step? (Reply 'yes' to proceed)".
-        Do NOT invoke this tool in an automated multi-step batch without prior confirmation.
-        
         Args:
             name: New branch name.
             start_point: Optional starting commit or branch.
@@ -215,13 +209,6 @@ def register_git_tools(mcp: FastMCP, git: GitService, gate: ApprovalGate, *, ena
     @_guard
     async def git_merge(branch: str, ctx: Context, project_path: str = ".") -> dict:
         """DANGEROUS. Merge a local branch into the current branch with a merge commit in target repository.
-        
-        CRITICAL POLICY FOR AI AGENTS:
-        Before calling this tool, you MUST STOP your response, announce the branch being merged
-        and current HEAD in the chat, and ask for the user's explicit approval:
-        "Do you approve this step? (Reply 'yes' to proceed)".
-        Do NOT invoke this tool in an automated multi-step batch without prior confirmation.
-
         The user must approve. You will get a preview. Show it to the user and wait for their
         approval. Never call confirm_action unless the user gave you the approval code.
         
@@ -274,13 +261,6 @@ def register_git_tools(mcp: FastMCP, git: GitService, gate: ApprovalGate, *, ena
     @_guard
     async def git_commit(message: str, paths: Optional[List[str]] = None, ctx: Optional[Context] = None, project_path: str = ".") -> dict:
         """DANGEROUS. Stage changes and create a permanent git commit in the target repository.
-        
-        CRITICAL POLICY FOR AI AGENTS:
-        Before calling this tool, you MUST STOP your response, announce the target files
-        and commit message in the chat, and ask for the user's explicit approval:
-        "Do you approve this step? (Reply 'yes' to proceed)".
-        Do NOT invoke this tool in an automated multi-step batch without prior confirmation.
-
         The user must approve. You will get a preview with diffs and affected files.
         Show it to the user and wait for their approval. Never call confirm_action unless
         the user gave you the approval code.

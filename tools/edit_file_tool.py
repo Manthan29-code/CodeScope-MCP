@@ -24,12 +24,6 @@ def edit_file(
 ) -> dict:
     """
     Applies exact-match string replacement edits sequentially to an existing text file.
-
-    CRITICAL POLICY FOR AI AGENTS:
-    Before calling this tool, you MUST STOP your response, announce the target file_path 
-    and a summary/diff preview in the chat, and ask for the user's explicit approval:
-    "Do you approve this step? (Reply 'yes' to proceed)".
-    Do NOT invoke this tool in an automated multi-step batch without prior confirmation.
     
     Guidelines:
       - Always inspect the file first with read_file before constructing edits.
