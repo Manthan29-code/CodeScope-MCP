@@ -23,8 +23,9 @@ def write_file(
     dry_run: bool = False,
     verify: Optional[list[str]] = None
 ) -> dict:
-    """
-    Creates a new file or completely overwrites an existing file.
+    """DANGEROUS. Creates a new file or completely overwrites an existing file in the target repository.
+    Only execute one file modification per turn. Always announce the target file path and provide
+    a concise 2-3 line summary of the content for user review and approval via the client dialog ([Allow once]).
     
     Guidelines for AI Agents:
       - Code Formatting & Indentation: ALWAYS write clean, properly indented, multi-line code with standard newlines (\\n).

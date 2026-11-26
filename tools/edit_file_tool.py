@@ -22,8 +22,9 @@ def edit_file(
     dry_run: bool = False,
     verify: Optional[List[str]] = None
 ) -> dict:
-    """
-    Applies exact-match string replacement edits sequentially to an existing text file.
+    """DANGEROUS. Applies exact-match string replacement edits sequentially to an existing text file.
+    Only execute one file modification per turn. Always announce the target file path and provide
+    a concise 2-3 line summary of the edits for user review and approval via the client dialog ([Allow once]).
     
     Guidelines:
       - Always inspect the file first with read_file before constructing edits.

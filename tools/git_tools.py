@@ -151,6 +151,7 @@ def register_git_tools(mcp: FastMCP, git: GitService, gate: ApprovalGate, *, ena
     async def git_branch_create(name: str, start_point: Optional[str] = None, checkout: bool = False,
                               project_path: str = ".") -> dict:
         """Create a local branch (optionally switching to it) in target repository. Does not modify any files unless checkout=true.
+        Only execute one Git modification per turn. Announce the branch name and starting point for user review and approval via the client dialog ([Allow once]).
         
         Args:
             name: New branch name.
@@ -209,8 +210,7 @@ def register_git_tools(mcp: FastMCP, git: GitService, gate: ApprovalGate, *, ena
     @_guard
     async def git_merge(branch: str, ctx: Context, project_path: str = ".") -> dict:
         """DANGEROUS. Merge a local branch into the current branch with a merge commit in target repository.
-        The user must approve. You will get a preview. Show it to the user and wait for their
-        approval. Never call confirm_action unless the user gave you the approval code.
+        Only execute one Git modification per turn. Always announce the branch being merged for user review and approval via the client dialog ([Allow once]).
         
         Args:
             branch: Branch to merge into current HEAD.
@@ -261,9 +261,7 @@ def register_git_tools(mcp: FastMCP, git: GitService, gate: ApprovalGate, *, ena
     @_guard
     async def git_commit(message: str, paths: Optional[List[str]] = None, ctx: Optional[Context] = None, project_path: str = ".") -> dict:
         """DANGEROUS. Stage changes and create a permanent git commit in the target repository.
-        The user must approve. You will get a preview with diffs and affected files.
-        Show it to the user and wait for their approval. Never call confirm_action unless
-        the user gave you the approval code.
+        Only execute one Git modification per turn. Always announce the target files and commit message for user review and approval via the client dialog ([Allow once]).
         
         Args:
             message: Commit message describing the changes.

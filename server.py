@@ -38,12 +38,12 @@ CodeScope MCP Server Guidelines:
 - Code Formatting & Indentation: When writing or editing code files (HTML, CSS, JavaScript, TypeScript, React/JSX/TSX, Python, Java, C/C++, Go, Rust, JSON, YAML, etc.), ALWAYS output clean, beautifully formatted, multi-line source code with standard indentation (2 spaces for HTML/CSS/JS/TS/React/JSON/YAML, 4 spaces for Python/Java/C/C++).
 - No Minification: NEVER compress or collapse entire files, functions, HTML tags, or CSS rules into a single line unless specifically requested (e.g. a .min.js or .min.css file).
 - Directory Creation: Always set create_parents=True when writing files located in subdirectories so parent folders are automatically created.
-- Execution Policy & Conversational Approval Rules:
-  * Read & Inspect Tools (FREELY ALLOWED): read_file, read_multiple_files, search_files, list_directory_tree, get_file_metadata, git_status, git_diff, git_log, git_show, git_branch_list. Execute these immediately without asking for user permission so you can freely read code, inspect repository status, and check branch lists.
-  * Modifying Tools (STOP & ASK USER APPROVAL): write_file, edit_file, delete_file, move_file, copy_file, replace_in_files, git_branch_create, git_switch, git_commit, git_merge, git_revert, git_restore, git_push.
-    1. NEVER combine multiple write or git modifications into a single turn. Work strictly ONE step at a time.
-    2. BEFORE calling any modifying tool, you MUST STOP your response, clearly state the target file path or branch name, summarize the planned action, and ask: "Do you approve this step? (Reply 'yes' to proceed)".
-    3. Do NOT call the modifying tool in that same turn. Wait for the user to explicitly reply "yes" before making the tool call.
+- Execution Policy & Single-Step Approval Rules:
+  * Read & Inspect Tools (FREELY ALLOWED): read_file, read_multiple_files, search_files, list_directory_tree, get_file_metadata, git_status, git_diff, git_log, git_show, git_branch_list. Execute these immediately without prior confirmation so you can inspect repository status and browse code freely.
+  * Modifying Tools (ONE AT A TIME WITH PREVIEW): write_file, edit_file, delete_file, move_file, copy_file, replace_in_files, git_branch_create, git_switch, git_commit, git_merge, git_revert, git_restore, git_push.
+    1. STRICTLY ONE STEP AT A TIME: Never combine or chain multiple modifying tools in a single turn. Execute exactly ONE modifying tool per turn so the user can review and approve it via their client's confirmation card ([Allow once]).
+    2. STATE TARGET & 2-3 LINE SUMMARY: Immediately before calling the tool, state the target file path or branch name and provide a concise 2-3 line summary of what you are doing in your response text.
+    3. NO BATCHED CALLS: Do not invoke any subsequent modifying tools until the current tool call completes and the user sees the result.
 """
 
 # Create FastMCP server instance
