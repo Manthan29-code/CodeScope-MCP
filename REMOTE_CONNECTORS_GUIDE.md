@@ -215,6 +215,35 @@ Use apply_diff_patch or apply_single_edit to update the timeout parameter in con
 
 ---
 
+## 🚦 Best Practice: Conversational Tool Execution Rule (Custom Instructions)
+
+When using CodeScope MCP with cloud chat models (ChatGPT, Claude, Gemini), the AI can sometimes eagerly execute multi-step tasks (e.g. creating a branch, writing files, and committing) all in a single turn without pausing.
+
+To give you complete oversight without needing to type terminal PIN codes, add this **Tool Execution Rule** to your **Custom Instructions** (in ChatGPT: *Settings → Personalization → Custom Instructions*; in Claude/Gemini: *Project or System Instructions*):
+
+```text
+Tool Execution Rule:
+1. Read & Inspection Tools (RUN FREELY WITHOUT ASKING):
+   You may freely and immediately execute read_file, search_files, list_directory_tree, get_file_metadata, git_status, git_diff, git_log, git_show, and git_branch_list without asking for prior confirmation.
+2. Modifying & Destructive Tools (STOP & ASK FOR APPROVAL):
+   Before calling ANY tool that creates, modifies, deletes, or commits files (write_file, edit_file, delete_file, move_file, copy_file, replace_in_files, git_branch_create, git_switch, git_commit, git_merge, git_revert, git_restore, git_push):
+   - You MUST stop your turn before calling the tool.
+   - State the target file path(s) or branch name.
+   - Provide a concise 2–3 line summary of what you are writing, editing, or committing.
+   - Ask: "Do you approve this step? (Reply 'yes' to proceed)".
+3. Wait for my explicit "yes" in the chat before executing the tool call.
+4. Never execute multiple modifications in a single turn—work strictly one step at a time.
+```
+
+> [!TIP]
+> **Customizing This Rule:**
+> You can easily adjust this prompt depending on your personal workflow:
+> - **Want the AI to ask before running tests/builds?** Add verification tools (`verify_run`, `verify_check`) into Section 2.
+> - **Want to allow branching without confirmation?** Move `git_branch_create` and `git_switch` into Section 1.
+> - **Want strict approval for searches/reads as well?** Move any read tools you want to monitor into Section 2.
+
+---
+
 ## 🛡️ Security Checklists for Remote Chat LLMs
 
 Connecting a remote cloud LLM to your local machine requires strict safeguards. CodeScope MCP enforces these by default:

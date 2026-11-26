@@ -34,6 +34,33 @@ To reduce the likelihood of encountering stream errors when working on large fea
 5. **Review changes incrementally**: Inspect the Git diff (`git_diff`) and status (`git_status`) between implementation phases.
 6. **Investigate the stream itself**: If the error persists, examine the `/mcp` endpoint logs, exception handlers in `utils/error_handler.py`, ngrok web inspection (`http://127.0.0.1:4040`), and proxy timeouts.
 
+### 🚦 Preventing Unintended Multi-Tool Batches with a Tool Execution Rule
+
+A common trigger for "Error in message stream" is the LLM attempting to chain multiple large tool executions in a single turn (e.g., creating a branch, writing multiple files, and committing at once). This overloads the stream buffer and prevents the human from reviewing changes.
+
+To enforce single-step execution, add this rule to your chat prompt or Custom Instructions:
+
+```text
+Tool Execution Rule:
+1. Read & Inspection Tools (RUN FREELY WITHOUT ASKING):
+   You may freely and immediately execute read_file, search_files, list_directory_tree, get_file_metadata, git_status, git_diff, git_log, git_show, and git_branch_list without asking for prior confirmation.
+2. Modifying & Destructive Tools (STOP & ASK FOR APPROVAL):
+   Before calling ANY tool that creates, modifies, deletes, or commits files (write_file, edit_file, delete_file, move_file, copy_file, replace_in_files, git_branch_create, git_switch, git_commit, git_merge, git_revert, git_restore, git_push):
+   - You MUST stop your turn before calling the tool.
+   - State the target file path(s) or branch name.
+   - Provide a concise 2–3 line summary of what you are writing, editing, or committing.
+   - Ask: "Do you approve this step? (Reply 'yes' to proceed)".
+3. Wait for my explicit "yes" in the chat before executing the tool call.
+4. Never execute multiple modifications in a single turn—work strictly one step at a time.
+```
+
+> [!TIP]
+> **Customizing This Prompt:**
+> You can modify this rule according to your needs:
+> - If you want the AI to ask before running verification checks or builds (`verify_run`, `verify_check`), move them into Section 2.
+> - If you want certain write tools (like `git_branch_create`) to execute automatically, move them into Section 1.
+> - If you want the AI to ask before inspecting certain files or directories, move those read tools into Section 2.
+
 ---
 
 ## 🛠️ Step-by-Step Diagnostic Checklist
