@@ -222,18 +222,19 @@ When using CodeScope MCP with cloud chat models (ChatGPT, Claude, Gemini), the A
 To give you complete oversight without needing to type terminal PIN codes, add this **Tool Execution Rule** to your **Custom Instructions** (in ChatGPT: *Settings → Personalization → Custom Instructions*; in Claude/Gemini: *Project or System Instructions*):
 
 ```text
-Tool Execution Rule:
-1. One step at a time: Never combine multiple modifying tools in a single turn. Execute strictly one modifying action per turn so the user can review and approve it via the client's confirmation card ([Allow once]).
-2. 2-3 line summary before modifying: Immediately before calling any tool that creates, modifies, or commits files (write_file, edit_file, delete_file, git_branch_create, git_commit, git_merge, etc.), state the target file path or branch name and provide a concise 2-3 line summary of what you are doing.
-3. Read tools run freely: Read and inspection tools (read_file, search_files, list_directory_tree, get_file_metadata, git_status, git_diff, git_log, git_show, git_branch_list) can be executed immediately without prior confirmation.
+RULES:
+1. One step at a time (never batch tools; this workflow is an outline, NOT pre-approval).
+2. Before every branch, write, commit, or merge: stop and show a 2-3 line summary.
+3. Do not call any modifying tool until I explicitly approve that specific step.
+4. Freely allowed: Read and inspect tools (git_status, git_diff, git_log, git_branch_list, read_file, search_files, list_directory_tree) run immediately without asking.
 ```
 
 > [!TIP]
 > **Customizing This Rule:**
-> You can easily adjust this prompt depending on your personal workflow:
-> - **Want the AI to ask before running tests/builds?** Add verification tools (`verify_run`, `verify_check`) into Section 2.
-> - **Want to allow branching without confirmation?** Move `git_branch_create` and `git_switch` into Section 1.
-> - **Want strict approval for searches/reads as well?** Move any read tools you want to monitor into Section 2.
+> You can freely modify or adapt these rules to suit your specific workflow:
+> - **Want the AI to ask before running tests or builds?** Add verification tools (`verify_run`, `verify_check`) to Rule 2.
+> - **Want certain tools to run automatically without asking?** Move any modifying tools (e.g. `git_branch_create`) into Rule 4.
+> - **Want strict approval for sensitive file reads or searches?** Remove them from Rule 4 and add them to Rule 2.
 
 ---
 
