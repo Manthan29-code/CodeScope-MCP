@@ -95,8 +95,9 @@ def test_search_files_tool_integration_blocked(project, tmp_path_factory, monkey
     monkeypatch.setattr(config, "READ_ALLOWED_ROOTS", [str(project)])
     outside = tmp_path_factory.mktemp("outside_dir")
 
-    with pytest.raises(path_security.ReadRootNotAllowedError):
-        search_files("query", project_path=str(outside))
+    res = search_files("query", project_path=str(outside))
+    assert res.get("ok") is False
+    assert "not within any allowed root in READ_ALLOWED_ROOTS" in res.get("error", "")
 
 
 def test_read_file_protected_path_blocked(project, monkeypatch):

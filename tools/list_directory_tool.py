@@ -1,6 +1,7 @@
-from typing import Optional
+from typing import Any, Dict, Optional, Union
 from services.tree_service import build_tree
 from models.schemas import ListDirectoryOutput
+from utils.error_handler import handle_tool_errors
 
 annotations = {
     "readOnlyHint": True,
@@ -9,12 +10,15 @@ annotations = {
     "openWorldHint": False,
 }
 
+_guard = handle_tool_errors()
 
+
+@_guard
 def list_directory_tree(
     project_path: str = ".",
     max_depth: Optional[int] = None,
     include_hidden: bool = False
-) -> ListDirectoryOutput:
+) -> Union[ListDirectoryOutput, Dict[str, Any]]:
     """
     Returns a filtered directory tree structure for a given project path.
     Excludes gitignored / junk directories (.venv, node_modules, .git, etc.) to save context.

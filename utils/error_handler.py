@@ -30,11 +30,16 @@ def format_tool_error(exc: Exception, tool_name: str = "") -> Dict[str, Any]:
     elif "filetoolargeerror" in exc_type.lower() or "max_write_size_bytes" in msg.lower():
         error_type = "FileTooLargeError"
         hint = "The write content exceeds MAX_WRITE_SIZE_BYTES. Break the content into smaller files or use edit_file for partial edits."
-    elif "READ_ALLOWED_ROOTS" in msg or "WRITE_ALLOWED_ROOTS" in msg or "Access denied" in msg or "RootNotAllowedError" in exc_type:
+    elif (
+        "read_allowed_roots" in msg.lower()
+        or "write_allowed_roots" in msg.lower()
+        or "access denied" in msg.lower()
+        or "rootnotallowederror" in exc_type.lower()
+    ):
         error_type = "AccessDeniedError"
         hint = (
-            "The requested project_path is outside the configured allowed roots. "
-            "Ensure the path is approved in .env (ALLOWED_PROJECT_ROOTS, READ_ALLOWED_ROOTS, or WRITE_ALLOWED_ROOTS)."
+            "The requested project path is outside the allowed directories. "
+            "Add the project folder to ALLOWED_PROJECT_ROOTS or READ_ALLOWED_ROOTS in .env."
         )
     elif "writedisablederror" in exc_type.lower() or "write operations are disabled" in msg.lower():
         error_type = "WriteDisabledError"

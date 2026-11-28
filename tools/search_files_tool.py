@@ -1,6 +1,7 @@
-from typing import Optional, Literal
+from typing import Any, Dict, Optional, Literal, Union
 from services.search_service import search
 from models.schemas import SearchFilesOutput
+from utils.error_handler import handle_tool_errors
 
 annotations = {
     "readOnlyHint": True,
@@ -9,7 +10,10 @@ annotations = {
     "openWorldHint": False,
 }
 
+_guard = handle_tool_errors()
 
+
+@_guard
 def search_files(
     query: str,
     project_path: str = ".",
@@ -19,7 +23,7 @@ def search_files(
     regex: bool = False,
     max_results: int = 50,
     offset: int = 0
-) -> SearchFilesOutput:
+) -> Union[SearchFilesOutput, Dict[str, Any]]:
     """
     Searches for files or code content within the project root directory.
     Filters out ignored directories/files (.venv, node_modules, .git, build, etc.) automatically.

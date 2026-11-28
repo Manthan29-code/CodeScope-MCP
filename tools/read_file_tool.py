@@ -1,6 +1,7 @@
-from typing import Optional
+from typing import Any, Dict, Optional, Union
 from services.read_service import read_one
 from models.schemas import ReadFileOutput
+from utils.error_handler import handle_tool_errors
 
 annotations = {
     "readOnlyHint": True,
@@ -9,13 +10,16 @@ annotations = {
     "openWorldHint": False,
 }
 
+_guard = handle_tool_errors()
 
+
+@_guard
 def read_file(
     file_path: str,
     project_path: str = ".",
     offset: int = 0,
     limit: Optional[int] = None
-) -> ReadFileOutput:
+) -> Union[ReadFileOutput, Dict[str, Any]]:
     """
     Reads the content of a single text file in the project with pagination support.
     

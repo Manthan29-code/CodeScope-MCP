@@ -1,6 +1,7 @@
-from typing import List, Optional
+from typing import Any, Dict, List, Optional, Union
 from services.read_service import read_many
 from models.schemas import ReadMultipleFilesOutput
+from utils.error_handler import handle_tool_errors
 
 annotations = {
     "readOnlyHint": True,
@@ -9,12 +10,15 @@ annotations = {
     "openWorldHint": False,
 }
 
+_guard = handle_tool_errors()
 
+
+@_guard
 def read_multiple_files(
     file_paths: List[str],
     project_path: str = ".",
     limit_per_file: Optional[int] = None
-) -> ReadMultipleFilesOutput:
+) -> Union[ReadMultipleFilesOutput, Dict[str, Any]]:
     """
     Reads multiple files in a single batch request to avoid multiple tool calls.
     
